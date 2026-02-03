@@ -20,7 +20,7 @@ sudo apt install ros-jazzy-usb-cam python3-flask ros-jazzy-web-video-server ros-
 cd ~/ros2_ws/src
 git clone https://github.com/NikolayIvanovWS/brover_web.git
 cd ~/ros2_ws
-colcon build --symlink-install --packages-select=brover_web
+colcon build --packages-select=brover_web
 ```
 
 ```bash
