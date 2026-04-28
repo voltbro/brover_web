@@ -192,7 +192,7 @@ $(document).ready(function(){
         formatter: v => 'Положение: ' + v
     }).on('change', function(slider){
 
-      var value = slider.value.newValue + 90;  // Нормализация [-90;90] → [0;180]
+      var value = (-slider.value.newValue) + 90;  // Нормализация [-90;90] → [0;180]
       value = clamp(value, 20, 160);
       
       var servo_pose = new ROSLIB.Message({        
