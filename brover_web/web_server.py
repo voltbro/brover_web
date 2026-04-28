@@ -3,6 +3,7 @@ import os, signal, time
 from rclpy.node import Node
 from flask import Flask, send_from_directory, send_file, request, jsonify, render_template
 from ament_index_python.packages import get_package_share_directory
+import socket
 
 ROS_DOMAIN_ID :int = int(os.environ.get('ROS_DOMAIN_ID',0))
 rclpy.init(domain_id = ROS_DOMAIN_ID)
@@ -45,8 +46,10 @@ def get_video_topics():
 @app.route("/")
 def serve_index():
   ip_address = request.host.split(':')[0]
+  robot_name = socket.gethostname()
   return render_template('index.html', 
                         ros_host = ip_address,
+                        ros_robot = robot_name,
                         video_topics = get_video_topics())
 #   return "Hello World1!"
 
