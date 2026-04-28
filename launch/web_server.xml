@@ -7,4 +7,5 @@
         <param name="publish_rate" value="1.0"/>
     </node>
     <node pkg="brover_web" exec="web_server" name="web_server"/>
+    <node pkg="brover_web" exec="irrigation_control" name="web_can_bridge"/>
 </launch>
