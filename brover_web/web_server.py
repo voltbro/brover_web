@@ -47,6 +47,7 @@ def serve_index():
   ip_address = request.host.split(':')[0]
   return render_template('index.html', 
                         ros_host = ip_address,
+                        ros_robot = robot_name,
                         video_topics = get_video_topics())
 #   return "Hello World1!"
 
