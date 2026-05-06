@@ -3,6 +3,7 @@ import os, signal, time
 from rclpy.node import Node
 from flask import Flask, send_from_directory, send_file, request, jsonify, render_template
 from ament_index_python.packages import get_package_share_directory
+import socket
 
 ROS_DOMAIN_ID :int = int(os.environ.get('ROS_DOMAIN_ID',0))
 rclpy.init(domain_id = ROS_DOMAIN_ID)
