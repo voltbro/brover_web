@@ -45,6 +45,7 @@ def get_video_topics():
 @app.route("/")
 def serve_index():
   ip_address = request.host.split(':')[0]
+  robot_name = socket.gethostname()
   return render_template('index.html', 
                         ros_host = ip_address,
                         ros_robot = robot_name,
