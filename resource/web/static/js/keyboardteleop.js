@@ -77,14 +77,6 @@ KEYBOARDTELEOP.Teleop = function(options) {
         // down
         x = -0.8 * speed;
         break;
-      case 69:
-        // strafe right
-        y = -0.5 * speed;
-        break;
-      case 81:
-        // strafe left
-        y = 0.5 * speed;
-        break;
       default:
         pub = false;
     }
@@ -100,7 +92,7 @@ KEYBOARDTELEOP.Teleop = function(options) {
         linear : {
           x : x,
           y : y,
-          z : z
+          z : 0
         }
       });
       cmdVel.publish(twist);

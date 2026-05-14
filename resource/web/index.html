@@ -1,170 +1,285 @@
 <!doctype html>
-<html lang="ru" class="h-100">
+<html lang="ru">
   <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
-    <meta name="description" content="">
+    <title>BRover {{ros_robot}} Control</title>
 
-    <title>BRover {{ros_robot}} WEB control</title>
-
-    <!-- Bootstrap core CSS -->
     <link href="./static/css/bootstrap/bootstrap.css" rel="stylesheet">
     <link href="./static/css/bootstrap/bootstrap-slider.min.css" rel="stylesheet">
-    <link href="./static/css/sticky-footer-navbar.css" rel="stylesheet">
-    <link href="./static/css/styles.css" rel="stylesheet">    
+    <link href="./static/css/styles.css" rel="stylesheet">
   </head>
 
-  <body class="d-flex flex-column h-100">
-    <header>
-  <!-- Fixed navbar -->
-  <nav class="navbar navbar-expand-md navbar-dark fixed-top bg-dark">
-    <a class="navbar-brand" href="#">BRoverWeb</a>
-    <button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#navbarCollapse" aria-controls="navbarCollapse" aria-expanded="false" aria-label="Toggle navigation">
-      <span class="navbar-toggler-icon"></span>
-    </button>
-    <div class="collapse navbar-collapse" id="navbarCollapse">
-      <ul class="navbar-nav mr-auto">
-        <li class="nav-item active">
-          <a class="nav-link" href="#">Управление <span class="sr-only">(current)</span></a>
-        </li>
-        <li class="nav-item">
-          <a class="nav-link" href="http://{{ros_host}}:8090/?folder=/home/pi" target="_blank">VSCode</a>
-        </li>        
-        <li class="nav-item">
-          <a class="nav-link" href="https://docs.voltbro.ru/brover-manual/" target="_blank">Инструкция</a>
-        </li>
-      </ul>
-    </div>
-  </nav>
-</header>
-
-<!-- Begin page content -->
-<main role="main" class="flex-shrink-0">
-  <div class="container">
-    <h2 class="mt-3">Ровер {{ros_robot}}</h2>
-    <h4>Управление кнопками WSAD</h4>
-    <p class="lead"></p>
-      <p>Изменить максимальную скорость: &nbsp; 
-    <input
-    id="speed_slider"
-	type="text"
-	data-provide="slider"
-	data-slider-min="10"
-	data-slider-max="100"
-	data-slider-step="10"
-	data-slider-value="100"
-></p>
-
-    <div class="row">
-      <div class="col-8">
-        <h3>Видео</h3>
-        {% for video_topic in video_topics %}
-        <div class="pb-5"> 
-          <h5>Камера {{video_topic}}</h5>
-          <img src="http://{{ros_host}}:9999/stream?topic={{video_topic}}&type=ros_compressed" width="640" height="480"/>
-          <input name="del" type="button" class="btn btn-warning" value="Скрыть видео">
-        </div>
-        {% endfor %}
-
+  <body>
+    <header class="topbar">
+      <div class="topbar__brand">BRoverWEB</div>
+      <nav class="topbar__icons" aria-label="Быстрые ссылки">
+        <a class="icon-link" href="http://{{ros_host}}:8090/?folder=/home/pi" target="_blank" title="VS Code Web">VS Code Web</a>
+        <a class="icon-link" href="https://docs.voltbro.ru/brover-manual/" target="_blank" title="Инструкция">Инструкция</a>
+      </nav>
+      <div class="topbar__status">
+        <span>Статус:</span>
+        <div id="ros_status" class="status status--warn"><span class="status-dot"></span>ROS доступен</div>
       </div>
-      <div class="col-3">
-        <h3>Параметры</h3>
-          <div>Координата X: <span id="pose_x">#</span> м</div> 
-          <div>Координата Y: <span id="pose_y">#</span> м</div> 
-          <div>Угол поворота: <span id="imu_yaw">#</span> град</div> 
-          <div>Напряжение питания: <span id="bat_voltage">#</span> В.</div> 
-          <div class="resetodom">
-            <input type="button" class="btn btn-primary" value="Сбросить Одометрию">
+      <button id="theme_toggle" type="button" class="theme-toggle" aria-label="Переключить тему">Светлая тема</button>
+    </header>
+
+    <main class="dashboard">
+      <section class="video-panel">
+        {% if video_topics|length > 1 %}
+        <div class="camera-tabs">
+          {% for tab_topic in video_topics %}
+          <button type="button" class="camera-tab{% if loop.first %} camera-tab--active{% endif %}" data-camera="{{loop.index0}}">
+            Камера {{loop.index}}
+          </button>
+          {% endfor %}
+        </div>
+        {% endif %}
+
+        <div class="video-grid">
+          {% for video_topic in video_topics %}
+          <article class="video-card{% if loop.first %} video-card--active{% endif %}" data-camera="{{loop.index0}}">
+            <div class="video-frame">
+              <img src="http://{{ros_host}}:9999/stream?topic={{video_topic}}&type=ros_compressed" alt="Video stream {{video_topic}}">
+            </div>
+          </article>
+          {% endfor %}
+          {% if not video_topics %}
+          <article class="empty-state">
+            <h3>Камера не найдена</h3>
+            <p>ROS-топики с изображением сейчас не обнаружены.</p>
+          </article>
+          {% endif %}
+        </div>
+      </section>
+
+      <aside class="side-panel">
+        <section class="metric-panel">
+          <div class="panel-heading">
+            <div>
+              <div class="eyebrow">Одометрия</div>
+            </div>
           </div>
-      </div>    
-    </div>
-   
-    </div>
-</main>
 
-<footer class="footer mt-auto py-3">
-  <div class="container">
-    <span class="text-muted">&copy; Проект "Братья Вольт"</span>
-  </div>
-</footer>
-<script src="./static/js/jquery-3.5.1.min.js" ></script>
-<script src="./static/js/bootstrap/bootstrap.bundle.js"></script>
-<script src="./static/js/bootstrap/bootstrap-slider.min.js"></script>
-<script src="./static/js/eventemitter2.min.js"></script>
-<script src="./static/js/roslib.min.js"></script>
-<script src="./static/js/keyboardteleop.js"></script>
+          <div class="metric-grid">
+            <div class="metric">
+              <span>X</span>
+              <strong><span id="pose_x">--</span> м</strong>
+            </div>
+            <div class="metric">
+              <span>Y</span>
+              <strong><span id="pose_y">--</span> м</strong>
+            </div>
+            <div class="metric">
+              <span>Угол поворота</span>
+              <strong><span id="imu_yaw">--</span>°</strong>
+            </div>
+            <div class="metric metric--battery">
+              <span>Напряжение</span>
+              <strong><span id="bat_voltage">--</span> В</strong>
+            </div>
+          </div>
 
-<script>
-$(document).ready(function(){
+          <button id="reset_odom" type="button" class="primary-button">Сбросить одометрию</button>
+        </section>
 
-    $("input[name='del']").each(function( index ) {
-      $(this).on("click", function(){
-        $(this).closest("div").find("img").attr("src","");
-        $(this).closest("div").remove();
-      })
+        <section class="control-panel">
+          <div class="panel-heading">
+            <div>
+              <div class="eyebrow">Подвижная платформа</div>
+            </div>
+            <span id="speed_value" class="pill">100%</span>
+          </div>
+
+          <div class="speed-control">
+            <label for="speed_slider">Максимальная скорость</label>
+            <input
+              id="speed_slider"
+              type="text"
+              data-provide="slider"
+              data-slider-min="10"
+              data-slider-max="100"
+              data-slider-step="10"
+              data-slider-value="100">
+          </div>
+
+          <div class="keys">
+            <div></div><kbd data-drive="forward">W</kbd><div></div>
+            <kbd data-drive="left">A</kbd><kbd data-drive="backward">S</kbd><kbd data-drive="right">D</kbd>
+          </div>
+        </section>
+      </aside>
+    </main>
+
+    <script src="./static/js/jquery-3.5.1.min.js"></script>
+    <script src="./static/js/bootstrap/bootstrap.bundle.js"></script>
+    <script src="./static/js/bootstrap/bootstrap-slider.min.js"></script>
+    <script src="./static/js/eventemitter2.min.js"></script>
+    <script src="./static/js/roslib.min.js"></script>
+    <script src="./static/js/keyboardteleop.js"></script>
+
+    <script>
+    $(document).ready(function(){
+        var rosStatus = $('#ros_status');
+        var themeToggle = $('#theme_toggle');
+
+        function applyTheme(theme) {
+          $('body').toggleClass('theme-light', theme === 'light');
+          themeToggle.text(theme === 'light' ? 'Тёмная тема' : 'Светлая тема');
+        }
+
+        var savedTheme = localStorage.getItem('brover_theme') || 'dark';
+        applyTheme(savedTheme);
+
+        themeToggle.on('click', function() {
+          var nextTheme = $('body').hasClass('theme-light') ? 'dark' : 'light';
+          localStorage.setItem('brover_theme', nextTheme);
+          applyTheme(nextTheme);
+        });
+
+        $('.camera-tab').on('click', function() {
+          var camera = $(this).data('camera');
+          $('.camera-tab').removeClass('camera-tab--active');
+          $(this).addClass('camera-tab--active');
+          $('.video-card').removeClass('video-card--active');
+          $('.video-card[data-camera="' + camera + '"]').addClass('video-card--active');
+        });
+
+        var ros = new ROSLIB.Ros({
+            url : 'ws://{{ros_host}}:9090'
+        });
+
+        ros.on('connection', function() {
+          rosStatus.html('<span class="status-dot"></span>ROS доступен');
+          rosStatus.removeClass('status--warn status--bad').addClass('status--ok');
+        });
+
+        ros.on('error', function() {
+          rosStatus.html('<span class="status-dot"></span>ROS недоступен');
+          rosStatus.removeClass('status--ok status--warn').addClass('status--bad');
+        });
+
+        ros.on('close', function() {
+          rosStatus.html('<span class="status-dot"></span>ROS недоступен');
+          rosStatus.removeClass('status--ok status--warn').addClass('status--bad');
+        });
+
+        var teleop = new KEYBOARDTELEOP.Teleop({
+            ros : ros,
+            topic : '/cmd_vel',
+        });
+
+        var touchCmdVel = new ROSLIB.Topic({
+          ros : ros,
+          name : '/cmd_vel',
+          messageType : 'geometry_msgs/msg/Twist',
+          queue_length: 20
+        });
+
+        var touchDriveTimer = null;
+        var activeDriveButton = null;
+
+        function makeTwist(direction) {
+          var speed = teleop.scale;
+          var linearX = 0;
+          var angularZ = 0;
+
+          if (direction === 'forward') {
+            linearX = 0.8 * speed;
+          } else if (direction === 'backward') {
+            linearX = -0.8 * speed;
+          } else if (direction === 'left') {
+            angularZ = 1.5 * speed;
+          } else if (direction === 'right') {
+            angularZ = -1.5 * speed;
+          }
+
+          return new ROSLIB.Message({
+            angular: {x: 0, y: 0, z: angularZ},
+            linear: {x: linearX, y: 0, z: 0}
+          });
+        }
+
+        function publishDrive(direction) {
+          touchCmdVel.publish(makeTwist(direction));
+        }
+
+        function stopDrive() {
+          if (touchDriveTimer) {
+            clearInterval(touchDriveTimer);
+            touchDriveTimer = null;
+          }
+          if (activeDriveButton) {
+            activeDriveButton.removeClass('key-active');
+            activeDriveButton = null;
+          }
+          publishDrive('stop');
+        }
+
+        $('kbd[data-drive]').on('pointerdown', function(event) {
+          event.preventDefault();
+          stopDrive();
+          activeDriveButton = $(this);
+          activeDriveButton.addClass('key-active');
+          var direction = activeDriveButton.data('drive');
+          publishDrive(direction);
+          touchDriveTimer = setInterval(function() {
+            publishDrive(direction);
+          }, 120);
+        });
+
+        $(document).on('pointerup pointercancel pointerleave', function() {
+          stopDrive();
+        });
+
+        $('#speed_slider').slider({
+            formatter: function(value) {
+                return 'Скорость: ' + value + '%';
+            },
+        }).on('change', function(slider){
+            teleop.scale = (slider.value.newValue / 100.0);
+            $('#speed_value').text(slider.value.newValue + '%');
+        });
+
+        var odom2d_listener = new ROSLIB.Topic({
+          ros : ros,
+          name : '/odom_pose2d',
+          messageType : 'geometry_msgs/msg/Pose2D'
+        });
+
+        odom2d_listener.subscribe(function(message) {
+          var yaw = message.theta * 180 / Math.PI;
+          $('#pose_x').text(message.x.toFixed(2));
+          $('#pose_y').text(message.y.toFixed(2));
+          $('#imu_yaw').text(yaw.toFixed(0));
+        });
+
+        var bat_listener = new ROSLIB.Topic({
+          ros : ros,
+          name : '/bat',
+          messageType : 'sensor_msgs/msg/BatteryState'
+        });
+
+        bat_listener.subscribe(function(message) {
+          $('#bat_voltage').text(message.voltage.toFixed(2));
+        });
+
+        var resetOdomClient = new ROSLIB.Service({
+           ros : ros,
+           name : '/odom/reset',
+           serviceType : 'std_srvs/Empty'
+         });
+
+        var request = new ROSLIB.ServiceRequest();
+
+        $("#reset_odom").on("click", function(){
+          var that = $(this);
+          that.prop('disabled', true).text('Сброс...');
+          resetOdomClient.callService(request, function(){
+            that.prop('disabled', false).text('Сбросить одометрию');
+          });
+        });
     });
-
-    // Connecting to ROS.
-    var ros = new ROSLIB.Ros({
-        url : 'ws://{{ros_host}}:9090'
-    });
-
-    // Initialize the teleop.
-    var teleop = new KEYBOARDTELEOP.Teleop({
-        ros : ros,
-        topic : '/cmd_vel',
-    });
-
-    $('#speed_slider').slider({
-        formatter: function(value) {
-            return 'Скорость: ' + value + '%';
-        },    
-    }).on('change', function(slider){
-        teleop.scale = (slider.value.newValue / 100.0)
-    });
-
-    var odom2d_listener = new ROSLIB.Topic({
-      ros : ros,
-      name : '/odom_pose2d',
-      messageType : 'geometry_msgs/msg/Pose2D'
-    });
-    
-
-    odom2d_listener.subscribe(function(message) {
-      // console.log('Received message on ' + tele_listener.name + ': ' + message.odom_x);
-      yaw = message.theta*180/Math.PI
-      $('#pose_x').text(message.x.toFixed(2));
-      $('#pose_y').text(message.y.toFixed(2));
-      $('#imu_yaw').text(yaw.toFixed(0));
-    });
-
-    var bat_listener = new ROSLIB.Topic({
-      ros : ros,
-      name : '/bat',
-      messageType : 'sensor_msgs/msg/BatteryState'
-    });    
-    
-    bat_listener.subscribe(function(message) {
-      $('#bat_voltage').text(message.voltage.toFixed(2));
-    });
-
-    var restOdomClient = new ROSLIB.Service({
-       ros : ros,
-       name : '/odom/reset',
-       serviceType : 'std_srvs/Empty'
-     });
-   
-     var request = new ROSLIB.ServiceRequest();
-
-    $(".resetodom > input").on("click", function(){
-      var that = $(this)
-      that.removeClass('btn-primary');that.addClass('btn-secondary');
-      restOdomClient.callService(request, function(){
-        that.removeClass('btn-secondary');that.addClass('btn-primary');
-        console.log("Reset Odom")     
-      });  
-    })
-
-});
-</script>
+    </script>
+  </body>
 </html>
