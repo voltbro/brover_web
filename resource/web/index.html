@@ -36,7 +36,7 @@
         </div>
         {% endif %}
 
-        <div class="video-grid">
+        <div class="video-grid" data-ros-host="{{ros_host}}">
           {% for video_topic in video_topics %}
           <article class="video-card{% if loop.first %} video-card--active{% endif %}" data-camera="{{loop.index0}}">
             <div class="video-frame">
@@ -81,6 +81,18 @@
           </div>
 
           <button id="reset_odom" type="button" class="primary-button">Сбросить одометрию</button>
+
+          <div class="wifi-card">
+            <div class="wifi-card__header">
+              <span id="wifi_primary_label">Wi-Fi</span>
+              <strong id="wifi_primary_value">--</strong>
+            </div>
+            <div class="wifi-card__grid">
+              <span>SSID</span><strong id="wifi_ssid">--</strong>
+              <span>Режим</span><strong id="wifi_mode">--</strong>
+              <span>IP</span><strong id="wifi_ip">--</strong>
+            </div>
+          </div>
         </section>
 
         <section class="control-panel">
@@ -110,6 +122,25 @@
         </section>
       </aside>
     </main>
+
+    <section class="mobile-panel" aria-label="Мобильное управление">
+      <div class="mobile-joystick" id="mobile_joystick" role="application" aria-label="Джойстик управления ровером">
+        <div class="mobile-joystick__base">
+          <div class="mobile-joystick__knob" id="mobile_joystick_knob"></div>
+        </div>
+      </div>
+
+      <div class="mobile-wifi">
+        <span id="mobile_wifi_label">Wi-Fi</span>
+        <strong id="mobile_wifi_value">--</strong>
+        <small id="mobile_wifi_details">--</small>
+      </div>
+
+      <div class="mobile-battery">
+        <span>Напряжение</span>
+        <strong><span id="mobile_bat_voltage">--</span> В</strong>
+      </div>
+    </section>
 
     <script src="./static/js/jquery-3.5.1.min.js"></script>
     <script src="./static/js/bootstrap/bootstrap.bundle.js"></script>
@@ -216,6 +247,13 @@
           publishDrive('stop');
         }
 
+        function publishTwist(linearX, angularZ) {
+          touchCmdVel.publish(new ROSLIB.Message({
+            angular: {x: 0, y: 0, z: angularZ},
+            linear: {x: linearX, y: 0, z: 0}
+          }));
+        }
+
         $('kbd[data-drive]').on('pointerdown', function(event) {
           event.preventDefault();
           stopDrive();
@@ -230,6 +268,73 @@
 
         $(document).on('pointerup pointercancel pointerleave', function() {
           stopDrive();
+        });
+
+        var joystick = $('#mobile_joystick');
+        var joystickKnob = $('#mobile_joystick_knob');
+        var joystickTimer = null;
+        var joystickVector = {x: 0, y: 0};
+
+        function updateJoystick(event) {
+          var base = joystick.find('.mobile-joystick__base')[0];
+          var rect = base.getBoundingClientRect();
+          var radius = rect.width / 2;
+          var centerX = rect.left + radius;
+          var centerY = rect.top + radius;
+          var dx = event.clientX - centerX;
+          var dy = event.clientY - centerY;
+          var distance = Math.sqrt(dx * dx + dy * dy);
+
+          if (distance > radius) {
+            dx = dx / distance * radius;
+            dy = dy / distance * radius;
+          }
+
+          joystickVector.x = dx / radius;
+          joystickVector.y = dy / radius;
+          joystickKnob.css('transform', 'translate(' + dx + 'px, ' + dy + 'px)');
+        }
+
+        function publishJoystick() {
+          var speed = teleop.scale;
+          var linearX = -joystickVector.y * 0.8 * speed;
+          var angularZ = -joystickVector.x * 1.5 * speed;
+          publishTwist(linearX, angularZ);
+        }
+
+        function stopJoystick() {
+          if (joystickTimer) {
+            clearInterval(joystickTimer);
+            joystickTimer = null;
+          }
+          joystick.removeClass('mobile-joystick--active');
+          joystickVector = {x: 0, y: 0};
+          joystickKnob.css('transform', 'translate(0, 0)');
+          publishTwist(0, 0);
+        }
+
+        joystick.on('pointerdown', function(event) {
+          event.preventDefault();
+          stopDrive();
+          joystick.addClass('mobile-joystick--active');
+          this.setPointerCapture(event.originalEvent.pointerId);
+          updateJoystick(event.originalEvent);
+          publishJoystick();
+          joystickTimer = setInterval(publishJoystick, 120);
+        });
+
+        joystick.on('pointermove', function(event) {
+          if (!joystick.hasClass('mobile-joystick--active')) {
+            return;
+          }
+          event.preventDefault();
+          updateJoystick(event.originalEvent);
+          publishJoystick();
+        });
+
+        joystick.on('pointerup pointercancel', function(event) {
+          event.preventDefault();
+          stopJoystick();
         });
 
         $('#speed_slider').slider({
@@ -262,7 +367,35 @@
 
         bat_listener.subscribe(function(message) {
           $('#bat_voltage').text(message.voltage.toFixed(2));
+          $('#mobile_bat_voltage').text(message.voltage.toFixed(2));
         });
+
+        function updateWifiStatus() {
+          $.getJSON('/wifi_status', function(data) {
+            var signal = data.signal_percent === null ? '--' : data.signal_percent + '%';
+            var isAccessPoint = data.mode === 'ap';
+            var primaryLabel = isAccessPoint ? 'Скорость соединения' : 'Wi-Fi';
+            var primaryValue = isAccessPoint ? (data.bitrate || '--') : (signal + ' ' + (data.signal_label || ''));
+            var ssid = data.ssid || '--';
+            var mode = data.mode_label || '--';
+            var ip = data.ip || '--';
+
+            $('#wifi_primary_label').text(primaryLabel);
+            $('#wifi_primary_value').text(primaryValue);
+            $('#wifi_ssid').text(ssid);
+            $('#wifi_mode').text(mode);
+            $('#wifi_ip').text(ip);
+            $('#mobile_wifi_label').text(primaryLabel);
+            $('#mobile_wifi_value').text(isAccessPoint ? (data.bitrate || '--') : signal);
+            $('#mobile_wifi_details').text(ssid + ' · ' + mode + ' · ' + ip);
+          }).fail(function() {
+            $('#wifi_primary_value, #mobile_wifi_value').text('--');
+            $('#wifi_ssid, #wifi_mode, #wifi_ip, #mobile_wifi_details').text('--');
+          });
+        }
+
+        updateWifiStatus();
+        setInterval(updateWifiStatus, 5000);
 
         var resetOdomClient = new ROSLIB.Service({
            ros : ros,
