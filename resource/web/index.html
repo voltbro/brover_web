@@ -1,261 +1,504 @@
 <!doctype html>
-<html lang="ru" class="h-100">
-<head>
+<html lang="ru">
+  <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
-    <meta name="description" content="">
-
-    <title>BRover {{ros_robot}} WEB control</title>
+    <title>BRover {{ros_robot}} Control</title>
 
     <link href="./static/css/bootstrap/bootstrap.css" rel="stylesheet">
     <link href="./static/css/bootstrap/bootstrap-slider.min.css" rel="stylesheet">
-    <link href="./static/css/sticky-footer-navbar.css" rel="stylesheet">
-    <link href="./static/css/styles.css" rel="stylesheet">    
-</head>
+    <link href="./static/css/styles.css" rel="stylesheet">
+  </head>
 
-<body class="d-flex flex-column h-100">
-    <header>
-  <!-- Fixed navbar -->
-  <nav class="navbar navbar-expand-md navbar-dark fixed-top bg-dark">
-    <a class="navbar-brand" href="#">AgroBRoverWeb</a>
-    <button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#navbarCollapse" aria-controls="navbarCollapse" aria-expanded="false" aria-label="Toggle navigation">
-      <span class="navbar-toggler-icon"></span>
-    </button>
-    <div class="collapse navbar-collapse" id="navbarCollapse">
-      <ul class="navbar-nav mr-auto">
-        <li class="nav-item active">
-          <a class="nav-link" href="#">Управление <span class="sr-only">(current)</span></a>
-        </li>
-        <li class="nav-item">
-          <a class="nav-link" href="http://{{ros_host}}:8090/?folder=/home/pi" target="_blank">VSCode</a>
-        </li>        
-        <li class="nav-item">
-          <a class="nav-link" href="https://docs.voltbro.ru/brover-manual/" target="_blank">Инструкция</a>
-        </li>
-      </ul>
-    </div>
-  </nav>
-</header>
-
-<main role="main" class="flex-shrink-0">
-    <div class="container">
-
-        <h2 class="mt-3">Ровер {{ros_robot}}</h2>
-        <h4>Управление движением WSAD</h4>
-        
-        <p>Изменить максимальную скорость: &nbsp; 
-            <input id="speed_slider" type="text" data-provide="slider" data-slider-min="10" data-slider-max="100" data-slider-step="10" data-slider-value="100">
-        </p>
-
-        <div class="row">
-            <div class="col-8">
-                <h3>Видео</h3>
-                {% for video_topic in video_topics %}
-                <div class="pb-5"> 
-                    <h5>Камера {{video_topic}}</h5>
-                    <img src="http://{{ros_host}}:9999/stream?topic={{video_topic}}&type=ros_compressed" width="640" height="480"/>
-                    <input name="del" type="button" class="btn btn-warning" value="Скрыть видео">
-                </div>
-                {% endfor %}
-
-                <hr>
-                <h3>Параметры ровера</h3>
-                <div>Координата X: <span id="pose_x">#</span> м</div> 
-                <div>Координата Y: <span id="pose_y">#</span> м</div> 
-                <div>Угол поворота: <span id="imu_yaw">#</span> град</div> 
-                <div>Напряжение питания: <span id="bat_voltage">#</span> В.</div> 
-
-                <div class="resetodom">
-                    <input type="button" class="btn btn-primary" value="Сбросить Одометрию">
-                </div>
-            </div>
-
-            <div class="col-4">
-                <div style="margin-top: 0px">
-                    <h3>Управление камерой</h3>
-                    <div class="clear">
-                        <p><br>
-                            <input style="width: 100%;" id="horizontal_cam" type="text" data-provide="slider" data-slider-min="-90" data-slider-max="90" data-slider-step="5" data-slider-value="0">
-                        </p>
-
-                        <div style="text-align: center;">
-                            <p></p>
-                            <input id="vertical_cam" type="text" data-provide="slider" data-slider-orientation="vertical" data-slider-min="-45" data-slider-max="45" data-slider-step="5" data-slider-value="0" data-slider-reversed="1">
-                        </div>
-                    </div>
-                </div>
-
-                <div style="margin-top:50px">
-                    <h3>Управление насосом</h3>
-                    <input id="pump_on" type="button" class="btn btn-primary" value="Наполнить бак">
-                    <input id="pump_out" type="button" class="btn btn-primary" value="Полив">
-                </div>
-
-                <div style="margin-top:50px">
-                    <h3>Управление поливом</h3>
-                    <p>Положение полива кнопки: <mark>JIKL</mark></p>
-                </div>  
-            </div>    
+  <body>
+    <header class="topbar">
+      <div class="topbar__brand">BRoverWEB</div>
+      <nav class="topbar__icons" aria-label="Быстрые ссылки">
+        <a class="icon-link" href="http://{{ros_host}}:8090/?folder=/home/pi" target="_blank" title="VS Code Web">VS Code Web</a>
+        <a class="icon-link" href="https://docs.voltbro.ru/brover-manual/" target="_blank" title="Инструкция">Инструкция</a>
+      </nav>
+      <div class="topbar__status">
+        <span>Статус:</span>
+        <div id="ros_status" class="status status--warn"><span class="status-dot"></span>ROS доступен</div>
+        <div id="wifi_status" class="status status--warn" title="Качество сигнала Wi-Fi">
+          <span class="status-dot"></span>
+          <span>Wi-Fi</span>
+          <strong id="wifi_top_value">--</strong>
         </div>
-    </div>
-</main>
+      </div>
+      <button id="theme_toggle" type="button" class="theme-toggle" aria-label="Переключить тему">Светлая тема</button>
+    </header>
 
-<footer class="footer mt-auto py-3">
-    <div class="container">
-        <span class="text-muted">&copy; Проект "Братья Вольт"</span>
-    </div>
-</footer>
+    <main class="dashboard">
+      <section class="video-panel">
+        <div class="video-grid" data-ros-host="{{ros_host}}">
+          {% if video_topics %}
+          <article class="video-card">
+            <div class="video-frame">
+              <img src="http://{{ros_host}}:9999/stream?topic={{video_topics[0]}}&type=ros_compressed" alt="Видео с камеры ровера">
+            </div>
+          </article>
+          {% else %}
+          <article class="empty-state">
+            <h3>Камера не найдена</h3>
+            <p>ROS-топики с изображением сейчас не обнаружены.</p>
+          </article>
+          {% endif %}
+        </div>
 
-<script src="./static/js/jquery-3.5.1.min.js"></script>
-<script src="./static/js/bootstrap/bootstrap.bundle.js"></script>
-<script src="./static/js/bootstrap/bootstrap-slider.min.js"></script>
-<script src="./static/js/eventemitter2.min.js"></script>
-<script src="./static/js/roslib.min.js"></script>
-<script src="./static/js/keyboardteleop.js"></script>
+        <div class="video-speed">
+          <div class="video-speed__header">
+            <label for="speed_slider">Максимальная скорость</label>
+            <span id="speed_value" class="pill">100%</span>
+          </div>
+          <input
+            id="speed_slider"
+            type="text"
+            data-provide="slider"
+            data-slider-min="10"
+            data-slider-max="100"
+            data-slider-step="10"
+            data-slider-value="100"
+            data-slider-tooltip="hide">
+        </div>
+      </section>
 
-<script>
-$(document).ready(function(){
+      <div class="mobile-mode-tabs" role="tablist" aria-label="Режим управления">
+        <button type="button" class="mobile-mode-tab mobile-mode-tab--active" data-mobile-mode="agro">Агро</button>
+        <button type="button" class="mobile-mode-tab" data-mobile-mode="movement">Движение</button>
+      </div>
 
-    // Удаление видео
-    $("input[name='del']").each(function( index ) {
-      $(this).on("click", function(){
-        $(this).closest("div").find("img").attr("src","");
-        $(this).closest("div").remove();
-      })
+      <aside class="side-panel">
+        <section class="metric-panel">
+          <div class="panel-heading">
+            <div>
+              <div class="eyebrow">Одометрия</div>
+            </div>
+          </div>
+
+          <div class="metric-grid">
+            <div class="metric">
+              <span>X</span>
+              <strong><span id="pose_x">--</span> м</strong>
+            </div>
+            <div class="metric">
+              <span>Y</span>
+              <strong><span id="pose_y">--</span> м</strong>
+            </div>
+            <div class="metric">
+              <span>Угол поворота</span>
+              <strong><span id="imu_yaw">--</span>°</strong>
+            </div>
+            <div class="metric metric--battery">
+              <span>Напряжение</span>
+              <strong><span id="bat_voltage">--</span> В</strong>
+            </div>
+          </div>
+
+          <button id="reset_odom" type="button" class="primary-button">Сбросить одометрию</button>
+        </section>
+
+        <section class="agro-panel">
+          <div class="panel-heading">
+            <div>
+              <div class="eyebrow">Система полива</div>
+            </div>
+          </div>
+
+          <div class="agro-control">
+            <div class="agro-control__header">
+              <strong>Камера</strong>
+              <span>Поворот и наклон</span>
+            </div>
+            <label for="horizontal_cam">Поворот</label>
+            <input id="horizontal_cam" type="text" data-provide="slider" data-slider-min="-90" data-slider-max="90" data-slider-step="5" data-slider-value="0">
+            <label for="vertical_cam">Наклон</label>
+            <input id="vertical_cam" type="text" data-provide="slider" data-slider-min="-45" data-slider-max="45" data-slider-step="5" data-slider-value="0">
+          </div>
+
+          <div class="agro-control">
+            <div class="agro-control__header">
+              <strong>Насос</strong>
+              <span id="pump_status">Остановлен</span>
+            </div>
+            <div class="pump-controls">
+              <button id="pump_on" type="button" class="pump-button" data-pump-state="1">Наполнить бак</button>
+              <button id="pump_out" type="button" class="pump-button" data-pump-state="2">Полив</button>
+            </div>
+          </div>
+
+          <div class="agro-control">
+            <div class="agro-control__header">
+              <strong>Направление полива</strong>
+              <span><span id="irrigation_pan_value">90</span>° / <span id="irrigation_tilt_value">160</span>°</span>
+            </div>
+            <div class="irrigation-pad" aria-label="Управление направлением полива">
+              <div></div><button type="button" class="irrigation-button" data-irrigation-axis="tilt" data-irrigation-delta="2" aria-label="Полив вверх"><span class="irrigation-button__arrow">↑</span><span class="irrigation-button__key">K</span></button><div></div>
+              <button type="button" class="irrigation-button" data-irrigation-axis="pan" data-irrigation-delta="2" aria-label="Полив влево"><span class="irrigation-button__arrow">←</span><span class="irrigation-button__key">J</span></button>
+              <button type="button" class="irrigation-button" data-irrigation-axis="tilt" data-irrigation-delta="-2" aria-label="Полив вниз"><span class="irrigation-button__arrow">↓</span><span class="irrigation-button__key">I</span></button>
+              <button type="button" class="irrigation-button" data-irrigation-axis="pan" data-irrigation-delta="-2" aria-label="Полив вправо"><span class="irrigation-button__arrow">→</span><span class="irrigation-button__key">L</span></button>
+            </div>
+          </div>
+        </section>
+      </aside>
+    </main>
+
+    <section class="mobile-panel" aria-label="Мобильное управление">
+      <div class="mobile-joystick" id="mobile_joystick" role="application" aria-label="Джойстик управления ровером">
+        <div class="mobile-joystick__base">
+          <div class="mobile-joystick__knob" id="mobile_joystick_knob"></div>
+        </div>
+      </div>
+
+    </section>
+
+    <section class="mobile-footer-status" aria-label="Состояние ровера">
+      <span>Напряжение</span>
+      <strong><span id="mobile_bat_voltage">--</span> В</strong>
+    </section>
+
+    <script src="./static/js/jquery-3.5.1.min.js"></script>
+    <script src="./static/js/bootstrap/bootstrap.bundle.js"></script>
+    <script src="./static/js/bootstrap/bootstrap-slider.min.js"></script>
+    <script src="./static/js/eventemitter2.min.js"></script>
+    <script src="./static/js/roslib.min.js"></script>
+    <script src="./static/js/keyboardteleop.js"></script>
+
+    <script>
+    $(document).ready(function(){
+        var rosStatus = $('#ros_status');
+        var themeToggle = $('#theme_toggle');
+
+        function applyTheme(theme) {
+          $('body').toggleClass('theme-light', theme === 'light');
+          themeToggle.text(theme === 'light' ? 'Тёмная тема' : 'Светлая тема');
+        }
+
+        var savedTheme = localStorage.getItem('brover_theme') || 'dark';
+        applyTheme(savedTheme);
+
+        themeToggle.on('click', function() {
+          var nextTheme = $('body').hasClass('theme-light') ? 'dark' : 'light';
+          localStorage.setItem('brover_theme', nextTheme);
+          applyTheme(nextTheme);
+        });
+
+        var ros = new ROSLIB.Ros({
+            url : 'ws://{{ros_host}}:9090'
+        });
+
+        ros.on('connection', function() {
+          rosStatus.html('<span class="status-dot"></span>ROS доступен');
+          rosStatus.removeClass('status--warn status--bad').addClass('status--ok');
+        });
+
+        ros.on('error', function() {
+          rosStatus.html('<span class="status-dot"></span>ROS недоступен');
+          rosStatus.removeClass('status--ok status--warn').addClass('status--bad');
+        });
+
+        ros.on('close', function() {
+          rosStatus.html('<span class="status-dot"></span>ROS недоступен');
+          rosStatus.removeClass('status--ok status--warn').addClass('status--bad');
+        });
+
+        var teleop = new KEYBOARDTELEOP.Teleop({
+            ros : ros,
+            topic : '/cmd_vel',
+            onIrrigationChange : function(axis, value) {
+              $('#irrigation_' + axis + '_value').text(value);
+            }
+        });
+
+        function clamp(value, min, max) {
+          return Math.max(min, Math.min(max, value));
+        }
+
+        var cameraPanTopic = new ROSLIB.Topic({
+          ros : ros,
+          name : '/camera/pan',
+          messageType : 'std_msgs/Int16'
+        });
+
+        var cameraTiltTopic = new ROSLIB.Topic({
+          ros : ros,
+          name : '/camera/tilt',
+          messageType : 'std_msgs/Int16'
+        });
+
+        cameraPanTopic.publish(new ROSLIB.Message({data: 90}));
+        cameraTiltTopic.publish(new ROSLIB.Message({data: 60}));
+
+        $('#horizontal_cam').slider({
+          formatter: function(value) {
+            return 'Поворот: ' + value + '°';
+          }
+        }).on('change', function(slider) {
+          var value = clamp((-slider.value.newValue) + 90, 20, 160);
+          cameraPanTopic.publish(new ROSLIB.Message({data: value}));
+        });
+
+        $('#vertical_cam').slider({
+          formatter: function(value) {
+            return 'Наклон: ' + value + '°';
+          }
+        }).on('change', function(slider) {
+          var value = clamp(((slider.value.newValue + 45) * 2) - 30, 0, 180);
+          cameraTiltTopic.publish(new ROSLIB.Message({data: value}));
+        });
+
+        var pumpTopic = new ROSLIB.Topic({
+          ros : ros,
+          name : '/irrigation/pump',
+          messageType : 'std_msgs/Int16'
+        });
+
+        var activePumpButton = null;
+
+        function publishPump(state) {
+          pumpTopic.publish(new ROSLIB.Message({data: state}));
+        }
+
+        function stopPump() {
+          if (!activePumpButton) {
+            return;
+          }
+          publishPump(0);
+          activePumpButton.removeClass('pump-button--active');
+          activePumpButton = null;
+          $('#pump_status').text('Остановлен');
+        }
+
+        $('.pump-button').on('pointerdown', function(event) {
+          event.preventDefault();
+          stopPump();
+          activePumpButton = $(this);
+          activePumpButton.addClass('pump-button--active');
+          $('#pump_status').text(activePumpButton.data('pump-state') === 1 ? 'Наполнение' : 'Полив');
+          if (this.setPointerCapture) {
+            this.setPointerCapture(event.originalEvent.pointerId);
+          }
+          publishPump(activePumpButton.data('pump-state'));
+        }).on('pointerup pointercancel lostpointercapture', function() {
+          stopPump();
+        });
+
+        $(window).on('blur', stopPump);
+        $(document).on('visibilitychange', function() {
+          if (document.hidden) {
+            stopPump();
+          }
+        });
+
+        var irrigationRepeatTimer = null;
+        var activeIrrigationButton = null;
+
+        function adjustIrrigation(button) {
+          var axis = button.data('irrigation-axis');
+          var delta = Number(button.data('irrigation-delta'));
+          if (axis === 'pan') {
+            teleop.adjustIrrigationPan(delta);
+          } else {
+            teleop.adjustIrrigationTilt(delta);
+          }
+        }
+
+        function stopIrrigationRepeat() {
+          if (irrigationRepeatTimer) {
+            clearInterval(irrigationRepeatTimer);
+            irrigationRepeatTimer = null;
+          }
+          if (activeIrrigationButton) {
+            activeIrrigationButton.removeClass('irrigation-button--active');
+            activeIrrigationButton = null;
+          }
+        }
+
+        $('.irrigation-button').on('pointerdown', function(event) {
+          event.preventDefault();
+          stopIrrigationRepeat();
+          activeIrrigationButton = $(this);
+          activeIrrigationButton.addClass('irrigation-button--active');
+          if (this.setPointerCapture) {
+            this.setPointerCapture(event.originalEvent.pointerId);
+          }
+          adjustIrrigation(activeIrrigationButton);
+          irrigationRepeatTimer = setInterval(function() {
+            adjustIrrigation(activeIrrigationButton);
+          }, 120);
+        }).on('pointerup pointercancel lostpointercapture', stopIrrigationRepeat);
+
+        $('.mobile-mode-tab').on('click', function() {
+          var mode = $(this).data('mobile-mode');
+          $('.mobile-mode-tab').removeClass('mobile-mode-tab--active');
+          $(this).addClass('mobile-mode-tab--active');
+          $('body').toggleClass('mobile-mode-movement', mode === 'movement');
+        });
+
+        var touchCmdVel = new ROSLIB.Topic({
+          ros : ros,
+          name : '/cmd_vel',
+          messageType : 'geometry_msgs/msg/Twist',
+          queue_length: 20
+        });
+
+        function publishTwist(linearX, angularZ) {
+          touchCmdVel.publish(new ROSLIB.Message({
+            angular: {x: 0, y: 0, z: angularZ},
+            linear: {x: linearX, y: 0, z: 0}
+          }));
+        }
+
+        var joystick = $('#mobile_joystick');
+        var joystickKnob = $('#mobile_joystick_knob');
+        var joystickTimer = null;
+        var joystickVector = {x: 0, y: 0};
+
+        function updateJoystick(event) {
+          var base = joystick.find('.mobile-joystick__base')[0];
+          var rect = base.getBoundingClientRect();
+          var radius = rect.width / 2;
+          var centerX = rect.left + radius;
+          var centerY = rect.top + radius;
+          var dx = event.clientX - centerX;
+          var dy = event.clientY - centerY;
+          var distance = Math.sqrt(dx * dx + dy * dy);
+
+          if (distance > radius) {
+            dx = dx / distance * radius;
+            dy = dy / distance * radius;
+          }
+
+          joystickVector.x = dx / radius;
+          joystickVector.y = dy / radius;
+          joystickKnob.css('transform', 'translate(' + dx + 'px, ' + dy + 'px)');
+        }
+
+        function publishJoystick() {
+          var speed = teleop.scale;
+          var linearX = -joystickVector.y * 0.8 * speed;
+          var angularZ = -joystickVector.x * 1.5 * speed;
+          publishTwist(linearX, angularZ);
+        }
+
+        function stopJoystick() {
+          if (joystickTimer) {
+            clearInterval(joystickTimer);
+            joystickTimer = null;
+          }
+          joystick.removeClass('mobile-joystick--active');
+          joystickVector = {x: 0, y: 0};
+          joystickKnob.css('transform', 'translate(0, 0)');
+          publishTwist(0, 0);
+        }
+
+        joystick.on('pointerdown', function(event) {
+          event.preventDefault();
+          joystick.addClass('mobile-joystick--active');
+          this.setPointerCapture(event.originalEvent.pointerId);
+          updateJoystick(event.originalEvent);
+          publishJoystick();
+          joystickTimer = setInterval(publishJoystick, 120);
+        });
+
+        joystick.on('pointermove', function(event) {
+          if (!joystick.hasClass('mobile-joystick--active')) {
+            return;
+          }
+          event.preventDefault();
+          updateJoystick(event.originalEvent);
+          publishJoystick();
+        });
+
+        joystick.on('pointerup pointercancel', function(event) {
+          event.preventDefault();
+          stopJoystick();
+        });
+
+        $('#speed_slider').slider({
+            formatter: function(value) {
+                return 'Скорость: ' + value + '%';
+            },
+        }).on('change', function(slider){
+            teleop.scale = (slider.value.newValue / 100.0);
+            $('#speed_value').text(slider.value.newValue + '%');
+        });
+
+        var odom2d_listener = new ROSLIB.Topic({
+          ros : ros,
+          name : '/odom_pose2d',
+          messageType : 'geometry_msgs/msg/Pose2D'
+        });
+
+        odom2d_listener.subscribe(function(message) {
+          var yaw = message.theta * 180 / Math.PI;
+          $('#pose_x').text(message.x.toFixed(2));
+          $('#pose_y').text(message.y.toFixed(2));
+          $('#imu_yaw').text(yaw.toFixed(0));
+        });
+
+        var bat_listener = new ROSLIB.Topic({
+          ros : ros,
+          name : '/bat',
+          messageType : 'sensor_msgs/msg/BatteryState'
+        });
+
+        bat_listener.subscribe(function(message) {
+          $('#bat_voltage').text(message.voltage.toFixed(2));
+          $('#mobile_bat_voltage').text(message.voltage.toFixed(2));
+        });
+
+        function updateWifiStatus() {
+          $.getJSON('/wifi_status', function(data) {
+            var signal = data.signal_percent === null ? '--' : data.signal_percent + '%';
+            var isAccessPoint = data.mode === 'ap';
+            var primaryLabel = isAccessPoint ? 'Скорость соединения' : 'Wi-Fi';
+            var primaryValue = isAccessPoint ? (data.bitrate || '--') : (signal + ' ' + (data.signal_label || ''));
+            var ssid = data.ssid || '--';
+            var mode = data.mode_label || '--';
+            var ip = data.ip || '--';
+            var wifiStatus = $('#wifi_status');
+            var signalPercent = data.signal_percent;
+
+            $('#wifi_top_value').text(isAccessPoint ? 'AP' : signal);
+            wifiStatus.attr('title', ssid + ' · ' + mode + ' · ' + ip);
+            wifiStatus.removeClass('status--ok status--warn status--bad');
+            if (isAccessPoint || signalPercent === null || signalPercent >= 60) {
+              wifiStatus.addClass('status--ok');
+            } else if (signalPercent >= 30) {
+              wifiStatus.addClass('status--warn');
+            } else {
+              wifiStatus.addClass('status--bad');
+            }
+            $('#mobile_wifi_label').text(primaryLabel);
+            $('#mobile_wifi_value').text(isAccessPoint ? (data.bitrate || '--') : signal);
+            $('#mobile_wifi_details').text(ssid + ' · ' + mode + ' · ' + ip);
+          }).fail(function() {
+            $('#wifi_top_value, #mobile_wifi_value').text('--');
+            $('#wifi_status').removeClass('status--ok status--warn').addClass('status--bad');
+            $('#mobile_wifi_details').text('--');
+          });
+        }
+
+        updateWifiStatus();
+        setInterval(updateWifiStatus, 5000);
+
+        var resetOdomClient = new ROSLIB.Service({
+           ros : ros,
+           name : '/odom/reset',
+           serviceType : 'std_srvs/Empty'
+         });
+
+        var request = new ROSLIB.ServiceRequest();
+
+        $("#reset_odom").on("click", function(){
+          var that = $(this);
+          that.prop('disabled', true).text('Сброс...');
+          resetOdomClient.callService(request, function(){
+            that.prop('disabled', false).text('Сбросить одометрию');
+          });
+        });
     });
-
-    var ros = new ROSLIB.Ros({
-        url : 'ws://{{ros_host}}:9090'
-    });
-
-    // ===================== ТЕЛЕУПРАВЛЕНИЕ (AWSD) =====================
-
-    var teleop = new KEYBOARDTELEOP.Teleop({
-        ros : ros,
-        topic : '/cmd_vel',
-    });
-
-    $('#speed_slider').slider({
-        formatter: v => 'Скорость: ' + v + '%'
-    }).on('change', function(slider){
-        teleop.scale = (slider.value.newValue / 100.0);
-    });
-
-    // ===================== ТЕЛЕМЕТРИЯ =====================
-
-    var odom2d_listener = new ROSLIB.Topic({
-      ros : ros,
-      name : '/odom_pose2d',
-      messageType : 'geometry_msgs/msg/Pose2D'
-    });
-
-    odom2d_listener.subscribe(function(message) {
-      yaw = message.theta*180/Math.PI
-      $('#pose_x').text(message.x.toFixed(2));
-      $('#pose_y').text(message.y.toFixed(2));
-      $('#imu_yaw').text(yaw.toFixed(0));
-    });
-
-    var bat_listener = new ROSLIB.Topic({
-      ros : ros,
-      name : '/bat',
-      messageType : 'sensor_msgs/msg/BatteryState'
-    });    
-    
-    bat_listener.subscribe(function(message) {
-      $('#bat_voltage').text(message.voltage.toFixed(2));
-    });
-
-    // ===================== КАМЕРА (СЕРВО) =====================
-    
-    var cameraPanTopic = new ROSLIB.Topic({
-      ros : ros,
-      name : '/camera/pan',
-      messageType : 'std_msgs/Int16'
-    });
-    
-    var cameraTiltTopic = new ROSLIB.Topic({
-      ros : ros,
-      name : '/camera/tilt',
-      messageType : 'std_msgs/Int16'
-    });     
-     
-    // Установка начальных позиций
-    cameraPanTopic.publish(new ROSLIB.Message({data: 90}));
-    cameraTiltTopic.publish(new ROSLIB.Message({data: 60}));
-
-    function clamp(value, min, max) {
-      return Math.max(min, Math.min(max, value));
-    }
-
-    $('#horizontal_cam').slider({
-        formatter: v => 'Положение: ' + v
-    }).on('change', function(slider){
-
-      var value = (-slider.value.newValue) + 90;  // Нормализация [-90;90] → [0;180]
-      value = clamp(value, 20, 160);
-      
-      var servo_pose = new ROSLIB.Message({        
-        "data": value
-      });
-      cameraPanTopic.publish(servo_pose);
-    });
-
-    $('#vertical_cam').slider({
-        formatter: v => 'Положение: ' + v
-    }).on('change', function(slider){
-
-      var value = ((slider.value.newValue + 45) * 2) - 30; // Нормализация [-45;45] → [0;180]
-      value = clamp(value, 0, 180);
-      var servo_pose = new ROSLIB.Message({
-        "data": value 
-      });
-      cameraTiltTopic.publish(servo_pose);
-    });
-
-    // ===================== НАСОС =====================
-
-    var pumpTopic = new ROSLIB.Topic({
-      ros : ros,
-      name : '/irrigation/pump',
-      messageType : 'std_msgs/Int16'
-    });     
-
-    $("#pump_on").on("mousedown", function(){
-      $(this).removeClass('btn-primary').addClass('btn-success');
-      pumpTopic.publish(new ROSLIB.Message({"data" : 1}));  
-    }).on("mouseup", function(){
-      $(this).removeClass('btn-success').addClass('btn-primary');
-      pumpTopic.publish(new ROSLIB.Message({"data" : 0}));        
-    });      
-
-    $("#pump_out").on("mousedown", function(){
-      $(this).removeClass('btn-primary').addClass('btn-success');
-      pumpTopic.publish(new ROSLIB.Message({"data" : 2}));  
-    }).on("mouseup", function(){
-      $(this).removeClass('btn-success').addClass('btn-primary');
-      pumpTopic.publish(new ROSLIB.Message({"data" : 0}));        
-    });
-
-    // ===================== СЕРВИС СБРОСА =====================
-
-    var restOdomClient = new ROSLIB.Service({
-       ros : ros,
-       name : '/odom/reset',
-       serviceType : 'std_srvs/Empty'
-    });
-   
-    $(".resetodom > input").on("click", function(){
-      var btn = $(this);
-      btn.removeClass('btn-primary').addClass('btn-secondary');
-      restOdomClient.callService(new ROSLIB.ServiceRequest(), function(){
-        btn.removeClass('btn-secondary').addClass('btn-primary');
-        console.log("Odom Reset Done");
-      });  
-    });
-
-});
-</script>
-
-</body>
+    </script>
+  </body>
 </html>
