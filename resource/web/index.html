@@ -51,6 +51,25 @@
           </article>
           {% endif %}
         </div>
+
+        <div class="video-speed">
+          <div class="video-speed__header">
+            <label for="speed_slider">Максимальная скорость</label>
+            <div class="video-speed__meta">
+              <span class="keyboard-hint">Управление движением: WASD</span>
+              <span id="speed_value" class="pill">100%</span>
+            </div>
+          </div>
+          <input
+            id="speed_slider"
+            type="text"
+            data-provide="slider"
+            data-slider-min="10"
+            data-slider-max="100"
+            data-slider-step="10"
+            data-slider-value="100"
+            data-slider-tooltip="hide">
+        </div>
       </section>
 
       <aside class="side-panel">
@@ -95,31 +114,6 @@
           </div>
         </section>
 
-        <section class="control-panel">
-          <div class="panel-heading">
-            <div>
-              <div class="eyebrow">Подвижная платформа</div>
-            </div>
-            <span id="speed_value" class="pill">100%</span>
-          </div>
-
-          <div class="speed-control">
-            <label for="speed_slider">Максимальная скорость</label>
-            <input
-              id="speed_slider"
-              type="text"
-              data-provide="slider"
-              data-slider-min="10"
-              data-slider-max="100"
-              data-slider-step="10"
-              data-slider-value="100">
-          </div>
-
-          <div class="keys">
-            <div></div><kbd data-drive="forward">W</kbd><div></div>
-            <kbd data-drive="left">A</kbd><kbd data-drive="backward">S</kbd><kbd data-drive="right">D</kbd>
-          </div>
-        </section>
       </aside>
     </main>
 
@@ -188,11 +182,13 @@
         ros.on('error', function() {
           rosStatus.html('<span class="status-dot"></span>ROS недоступен');
           rosStatus.removeClass('status--ok status--warn').addClass('status--bad');
+          stopAllMotion(false);
         });
 
         ros.on('close', function() {
           rosStatus.html('<span class="status-dot"></span>ROS недоступен');
           rosStatus.removeClass('status--ok status--warn').addClass('status--bad');
+          stopAllMotion(false);
         });
 
         var teleop = new KEYBOARDTELEOP.Teleop({
@@ -207,68 +203,12 @@
           queue_length: 20
         });
 
-        var touchDriveTimer = null;
-        var activeDriveButton = null;
-
-        function makeTwist(direction) {
-          var speed = teleop.scale;
-          var linearX = 0;
-          var angularZ = 0;
-
-          if (direction === 'forward') {
-            linearX = 0.8 * speed;
-          } else if (direction === 'backward') {
-            linearX = -0.8 * speed;
-          } else if (direction === 'left') {
-            angularZ = 1.5 * speed;
-          } else if (direction === 'right') {
-            angularZ = -1.5 * speed;
-          }
-
-          return new ROSLIB.Message({
-            angular: {x: 0, y: 0, z: angularZ},
-            linear: {x: linearX, y: 0, z: 0}
-          });
-        }
-
-        function publishDrive(direction) {
-          touchCmdVel.publish(makeTwist(direction));
-        }
-
-        function stopDrive() {
-          if (touchDriveTimer) {
-            clearInterval(touchDriveTimer);
-            touchDriveTimer = null;
-          }
-          if (activeDriveButton) {
-            activeDriveButton.removeClass('key-active');
-            activeDriveButton = null;
-          }
-          publishDrive('stop');
-        }
-
         function publishTwist(linearX, angularZ) {
           touchCmdVel.publish(new ROSLIB.Message({
             angular: {x: 0, y: 0, z: angularZ},
             linear: {x: linearX, y: 0, z: 0}
           }));
         }
-
-        $('kbd[data-drive]').on('pointerdown', function(event) {
-          event.preventDefault();
-          stopDrive();
-          activeDriveButton = $(this);
-          activeDriveButton.addClass('key-active');
-          var direction = activeDriveButton.data('drive');
-          publishDrive(direction);
-          touchDriveTimer = setInterval(function() {
-            publishDrive(direction);
-          }, 120);
-        });
-
-        $(document).on('pointerup pointercancel pointerleave', function() {
-          stopDrive();
-        });
 
         var joystick = $('#mobile_joystick');
         var joystickKnob = $('#mobile_joystick_knob');
@@ -302,7 +242,8 @@
           publishTwist(linearX, angularZ);
         }
 
-        function stopJoystick() {
+        function stopJoystick(publishStop) {
+          var wasActive = joystickTimer !== null || joystick.hasClass('mobile-joystick--active');
           if (joystickTimer) {
             clearInterval(joystickTimer);
             joystickTimer = null;
@@ -310,12 +251,23 @@
           joystick.removeClass('mobile-joystick--active');
           joystickVector = {x: 0, y: 0};
           joystickKnob.css('transform', 'translate(0, 0)');
-          publishTwist(0, 0);
+          if (publishStop !== false && wasActive) {
+            publishTwist(0, 0);
+          }
+        }
+
+        function stopAllMotion(publishStop) {
+          if (teleop) {
+            teleop.stop(publishStop);
+          }
+          if (joystick) {
+            stopJoystick(publishStop);
+          }
         }
 
         joystick.on('pointerdown', function(event) {
           event.preventDefault();
-          stopDrive();
+          teleop.stop();
           joystick.addClass('mobile-joystick--active');
           this.setPointerCapture(event.originalEvent.pointerId);
           updateJoystick(event.originalEvent);
@@ -335,6 +287,16 @@
         joystick.on('pointerup pointercancel', function(event) {
           event.preventDefault();
           stopJoystick();
+        });
+
+        $(window).on('blur pagehide', function() {
+          stopAllMotion(ros.isConnected === true);
+        });
+
+        $(document).on('visibilitychange', function() {
+          if (document.hidden) {
+            stopAllMotion(ros.isConnected === true);
+          }
         });
 
         $('#speed_slider').slider({
@@ -404,13 +366,36 @@
          });
 
         var request = new ROSLIB.ServiceRequest();
+        var resetOdomAttempt = 0;
 
         $("#reset_odom").on("click", function(){
           var that = $(this);
+          var attempt = ++resetOdomAttempt;
+          var completed = false;
+
+          function finishReset(label) {
+            if (completed || attempt !== resetOdomAttempt) {
+              return;
+            }
+            completed = true;
+            clearTimeout(timeout);
+            that.prop('disabled', false).text(label);
+          }
+
           that.prop('disabled', true).text('Сброс...');
-          resetOdomClient.callService(request, function(){
-            that.prop('disabled', false).text('Сбросить одометрию');
-          });
+          var timeout = setTimeout(function() {
+            finishReset('Нет ответа — повторить');
+          }, 5000);
+
+          try {
+            resetOdomClient.callService(request, function(){
+              finishReset('Сбросить одометрию');
+            }, function(){
+              finishReset('Ошибка — повторить');
+            });
+          } catch (error) {
+            finishReset('Ошибка — повторить');
+          }
         });
     });
     </script>

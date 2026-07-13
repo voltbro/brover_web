@@ -45,6 +45,39 @@ KEYBOARDTELEOP.Teleop = function(options) {
     queue_length: 20
   });
 
+  var publishCurrentTwist = function() {
+    var twist = new ROSLIB.Message({
+      angular : {
+        x : 0,
+        y : 0,
+        z : z
+      },
+      linear : {
+        x : x,
+        y : y,
+        z : 0
+      }
+    });
+    cmdVel.publish(twist);
+    return twist;
+  };
+
+  this.stop = function(publishStop) {
+    var changed = x !== 0 || y !== 0 || z !== 0;
+    x = 0;
+    y = 0;
+    z = 0;
+
+    if (publishStop === false) {
+      return;
+    }
+
+    var twist = publishCurrentTwist();
+    if (changed) {
+      that.emit('change', twist);
+    }
+  };
+
   // sets up a key listener on the page used for keyboard teleoperation
   var handleKey = function(keyCode, keyDown) {
     // used to check for changes in speed
@@ -83,19 +116,7 @@ KEYBOARDTELEOP.Teleop = function(options) {
 
     // publish the command
     if (pub === true) {
-      var twist = new ROSLIB.Message({
-        angular : {
-          x : 0,
-          y : 0,
-          z : z
-        },
-        linear : {
-          x : x,
-          y : y,
-          z : 0
-        }
-      });
-      cmdVel.publish(twist);
+      var twist = publishCurrentTwist();
 
       // check for changes
       if (oldX !== x || oldY !== y || oldZ !== z) {
@@ -106,8 +127,18 @@ KEYBOARDTELEOP.Teleop = function(options) {
 
   // handle the key
   var body = document.getElementsByTagName('body')[0];
+  var isEditableTarget = function(target) {
+    if (!target) {
+      return false;
+    }
+    var tagName = target.tagName ? target.tagName.toLowerCase() : '';
+    return tagName === 'input' || tagName === 'textarea' || tagName === 'select' || target.isContentEditable;
+  };
+
   body.addEventListener('keydown', function(e) {
-    handleKey(e.keyCode, true);
+    if (!isEditableTarget(e.target)) {
+      handleKey(e.keyCode, true);
+    }
   }, false);
   body.addEventListener('keyup', function(e) {
     handleKey(e.keyCode, false);
