@@ -34,9 +34,8 @@ KEYBOARDTELEOP.Teleop = function(options) {
   // used to externally throttle the speed (e.g., from a slider)
   this.scale = 1.0;
 
-  // linear x and y movement and angular z movement
+  // linear x movement and angular z movement
   var x = 0;
-  var y = 0;
   var z = 0;
 
   var cmdVel = new ROSLIB.Topic({
@@ -45,6 +44,38 @@ KEYBOARDTELEOP.Teleop = function(options) {
     messageType : 'geometry_msgs/msg/Twist',
     queue_length: 20
   });
+
+  var publishCurrentTwist = function() {
+    var twist = new ROSLIB.Message({
+      angular : {
+        x : 0,
+        y : 0,
+        z : z
+      },
+      linear : {
+        x : x,
+        y : 0,
+        z : 0
+      }
+    });
+    cmdVel.publish(twist);
+    return twist;
+  };
+
+  this.stop = function(publishStop) {
+    var changed = x !== 0 || z !== 0;
+    x = 0;
+    z = 0;
+
+    if (publishStop === false) {
+      return;
+    }
+
+    var twist = publishCurrentTwist();
+    if (changed) {
+      that.emit('change', twist);
+    }
+  };
 
   var irrigationTiltAngle = 160;
   var irrigationPanAngle = 90;
@@ -83,7 +114,6 @@ KEYBOARDTELEOP.Teleop = function(options) {
   var handleKey = function(keyCode, keyDown) {
     // used to check for changes in speed
     var oldX = x;
-    var oldY = y;
     var oldZ = z;
 
     var pub = true;
@@ -110,14 +140,6 @@ KEYBOARDTELEOP.Teleop = function(options) {
       case 83:
         // down
         x = -0.8 * speed;
-        break;
-      case 81:
-        // lateral left
-        y = 0.5 * speed;
-        break;
-      case 69:
-        // lateral right
-        y = -0.5 * speed;
         break;
       case 74:
         // irrigation left
@@ -153,22 +175,10 @@ KEYBOARDTELEOP.Teleop = function(options) {
 
     // publish the command
     if (pub === true) {
-      var twist = new ROSLIB.Message({
-        angular : {
-          x : 0,
-          y : 0,
-          z : z
-        },
-        linear : {
-          x : x,
-          y : y,
-          z : 0
-        }
-      });
-      cmdVel.publish(twist);
+      var twist = publishCurrentTwist();
 
       // check for changes
-      if (oldX !== x || oldY !== y || oldZ !== z) {
+      if (oldX !== x || oldZ !== z) {
         that.emit('change', twist);
       }
     }
@@ -176,8 +186,18 @@ KEYBOARDTELEOP.Teleop = function(options) {
 
   // handle the key
   var body = document.getElementsByTagName('body')[0];
+  var isEditableTarget = function(target) {
+    if (!target) {
+      return false;
+    }
+    var tagName = target.tagName ? target.tagName.toLowerCase() : '';
+    return tagName === 'input' || tagName === 'textarea' || tagName === 'select' || target.isContentEditable;
+  };
+
   body.addEventListener('keydown', function(e) {
-    handleKey(e.keyCode, true);
+    if (!isEditableTarget(e.target)) {
+      handleKey(e.keyCode, true);
+    }
   }, false);
   body.addEventListener('keyup', function(e) {
     handleKey(e.keyCode, false);

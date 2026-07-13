@@ -35,7 +35,7 @@ setup(
         (os.path.join('share', package_name, WEB_RESOURCE_DEST, 'static', 'js', 'bootstrap'), 
             glob('resource/web/static/js/bootstrap/*')),
     ],
-    install_requires=['setuptools', 'flask'],
+    install_requires=['setuptools', 'flask', 'werkzeug', 'python-can'],
     include_package_data=True,
     zip_safe=False,
     maintainer='pi',

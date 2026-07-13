@@ -2,13 +2,14 @@ import rclpy
 import os, signal, time
 import re
 import subprocess
+import threading
 from rclpy.node import Node
 from flask import Flask, send_from_directory, send_file, request, jsonify, render_template
 from ament_index_python.packages import get_package_share_directory
+from werkzeug.serving import make_server
 import socket
 
 ROS_DOMAIN_ID :int = int(os.environ.get('ROS_DOMAIN_ID',0))
-rclpy.init(domain_id = ROS_DOMAIN_ID)
 
 package_name = 'brover_web'
 share_dir = get_package_share_directory(package_name)
@@ -18,31 +19,57 @@ app = Flask(__name__,
             static_folder=os.path.join(www_path, 'static'), 
             template_folder=www_path)
 
+WIFI_CACHE_TTL = 4.0
+CAMERA_CACHE_TTL = 5.0
+CAMERA_DISCOVERY_DELAY = 1.0
+_wifi_cache_lock = threading.Lock()
+_wifi_cache_time = 0.0
+_wifi_cache_data = None
+_camera_cache_lock = threading.Lock()
+_camera_cache_time = 0.0
+_camera_cache_topics = []
+_camera_node = None
+_http_server = None
+_shutdown_started = threading.Event()
+
 def shutdown_server():
-    func = request.environ.get('werkzeug.server.shutdown')
-    if func is None:
-        raise RuntimeError('Not running with the Werkzeug Server')
-    func()
+  server = _http_server
+  if server is None:
+    return False
+
+  if not _shutdown_started.is_set():
+    _shutdown_started.set()
+    threading.Thread(target=server.shutdown, name="brover-web-shutdown", daemon=True).start()
+  return True
 
 def signal_handler(sig, frame):
-    print('Received signal %s' % sig)
-    shutdown_server()
-
-signal.signal(signal.SIGTERM, signal_handler)
+  print('Received signal %s' % sig)
+  shutdown_server()
 
 def get_video_topics():
-    
-    topics = []
-    ros_web_node = Node("ros_web_node")
-    time.sleep(1.0)
+  global _camera_cache_time, _camera_cache_topics
 
-    for topic in ros_web_node.get_topic_names_and_types():
-        if topic[1] == ['sensor_msgs/msg/Image']:
-            # topics.append(topic[0].replace('/compressed',''))
-            topics.append(topic[0])
+  now = time.monotonic()
+  with _camera_cache_lock:
+    if now - _camera_cache_time < CAMERA_CACHE_TTL:
+      return list(_camera_cache_topics)
 
-    ros_web_node.destroy_node()
-    return topics        
+    if _camera_node is None:
+      return list(_camera_cache_topics)
+
+    try:
+      topics = [
+        topic_name
+        for topic_name, topic_types in _camera_node.get_topic_names_and_types()
+        if 'sensor_msgs/msg/Image' in topic_types
+      ]
+    except Exception as error:
+      print('Unable to read camera topics: %s' % error)
+      return list(_camera_cache_topics)
+
+    _camera_cache_topics = sorted(topics)
+    _camera_cache_time = time.monotonic()
+    return list(_camera_cache_topics)
 
 def run_command(command):
   try:
@@ -112,6 +139,19 @@ def get_wifi_status():
     "clients": clients,
   }
 
+def get_cached_wifi_status():
+  global _wifi_cache_time, _wifi_cache_data
+
+  now = time.monotonic()
+  with _wifi_cache_lock:
+    if _wifi_cache_data is not None and now - _wifi_cache_time < WIFI_CACHE_TTL:
+      return dict(_wifi_cache_data)
+
+    data = get_wifi_status()
+    _wifi_cache_data = dict(data)
+    _wifi_cache_time = time.monotonic()
+    return dict(_wifi_cache_data)
+
 @app.route("/")
 def serve_index():
   ip_address = request.host.split(':')[0]
@@ -124,15 +164,34 @@ def serve_index():
 
 @app.route('/shutdown', methods=['POST'])
 def shutdown():
-    shutdown_server()
-    return 'Server shutting down...'
+  if not shutdown_server():
+    return 'Server is not running', 503
+  return 'Server shutting down...'
 
 @app.route('/wifi_status')
 def wifi_status():
-    return jsonify(get_wifi_status())
+    return jsonify(get_cached_wifi_status())
 
 def main():
-  app.run(host="0.0.0.0", port=8080, threaded=True, debug=False)
+  global _camera_node, _http_server
+
+  rclpy.init(domain_id=ROS_DOMAIN_ID)
+  try:
+    _camera_node = Node("brover_web_camera_discovery")
+    time.sleep(CAMERA_DISCOVERY_DELAY)
+    _shutdown_started.clear()
+    _http_server = make_server("0.0.0.0", 8080, app, threaded=True)
+    signal.signal(signal.SIGTERM, signal_handler)
+    _http_server.serve_forever()
+  finally:
+    if _http_server is not None:
+      _http_server.server_close()
+      _http_server = None
+    if _camera_node is not None:
+      _camera_node.destroy_node()
+      _camera_node = None
+    if rclpy.ok():
+      rclpy.shutdown()
 
 if __name__ == "__main__":
   main()

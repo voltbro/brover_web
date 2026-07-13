@@ -195,11 +195,13 @@
         ros.on('error', function() {
           rosStatus.html('<span class="status-dot"></span>ROS недоступен');
           rosStatus.removeClass('status--ok status--warn').addClass('status--bad');
+          stopAllControls(false);
         });
 
         ros.on('close', function() {
           rosStatus.html('<span class="status-dot"></span>ROS недоступен');
           rosStatus.removeClass('status--ok status--warn').addClass('status--bad');
+          stopAllControls(false);
         });
 
         var teleop = new KEYBOARDTELEOP.Teleop({
@@ -259,11 +261,13 @@
           pumpTopic.publish(new ROSLIB.Message({data: state}));
         }
 
-        function stopPump() {
+        function stopPump(publishStop) {
           if (!activePumpButton) {
             return;
           }
-          publishPump(0);
+          if (publishStop !== false) {
+            publishPump(0);
+          }
           activePumpButton.removeClass('pump-button--active');
           activePumpButton = null;
           $('#pump_status').text('Остановлен');
@@ -281,13 +285,6 @@
           publishPump(activePumpButton.data('pump-state'));
         }).on('pointerup pointercancel lostpointercapture', function() {
           stopPump();
-        });
-
-        $(window).on('blur', stopPump);
-        $(document).on('visibilitychange', function() {
-          if (document.hidden) {
-            stopPump();
-          }
         });
 
         var irrigationRepeatTimer = null;
@@ -330,6 +327,7 @@
 
         $('.mobile-mode-tab').on('click', function() {
           var mode = $(this).data('mobile-mode');
+          stopAllControls(ros.isConnected === true);
           $('.mobile-mode-tab').removeClass('mobile-mode-tab--active');
           $(this).addClass('mobile-mode-tab--active');
           $('body').toggleClass('mobile-mode-movement', mode === 'movement');
@@ -381,7 +379,8 @@
           publishTwist(linearX, angularZ);
         }
 
-        function stopJoystick() {
+        function stopJoystick(publishStop) {
+          var wasActive = joystickTimer !== null || joystick.hasClass('mobile-joystick--active');
           if (joystickTimer) {
             clearInterval(joystickTimer);
             joystickTimer = null;
@@ -389,11 +388,25 @@
           joystick.removeClass('mobile-joystick--active');
           joystickVector = {x: 0, y: 0};
           joystickKnob.css('transform', 'translate(0, 0)');
-          publishTwist(0, 0);
+          if (publishStop !== false && wasActive) {
+            publishTwist(0, 0);
+          }
+        }
+
+        function stopAllControls(publishStop) {
+          if (teleop) {
+            teleop.stop(publishStop);
+          }
+          if (joystick) {
+            stopJoystick(publishStop);
+          }
+          stopPump(publishStop);
+          stopIrrigationRepeat();
         }
 
         joystick.on('pointerdown', function(event) {
           event.preventDefault();
+          teleop.stop();
           joystick.addClass('mobile-joystick--active');
           this.setPointerCapture(event.originalEvent.pointerId);
           updateJoystick(event.originalEvent);
@@ -413,6 +426,16 @@
         joystick.on('pointerup pointercancel', function(event) {
           event.preventDefault();
           stopJoystick();
+        });
+
+        $(window).on('blur pagehide', function() {
+          stopAllControls(ros.isConnected === true);
+        });
+
+        $(document).on('visibilitychange', function() {
+          if (document.hidden) {
+            stopAllControls(ros.isConnected === true);
+          }
         });
 
         $('#speed_slider').slider({
@@ -490,13 +513,36 @@
          });
 
         var request = new ROSLIB.ServiceRequest();
+        var resetOdomAttempt = 0;
 
         $("#reset_odom").on("click", function(){
           var that = $(this);
+          var attempt = ++resetOdomAttempt;
+          var completed = false;
+
+          function finishReset(label) {
+            if (completed || attempt !== resetOdomAttempt) {
+              return;
+            }
+            completed = true;
+            clearTimeout(timeout);
+            that.prop('disabled', false).text(label);
+          }
+
           that.prop('disabled', true).text('Сброс...');
-          resetOdomClient.callService(request, function(){
-            that.prop('disabled', false).text('Сбросить одометрию');
-          });
+          var timeout = setTimeout(function() {
+            finishReset('Нет ответа — повторить');
+          }, 5000);
+
+          try {
+            resetOdomClient.callService(request, function(){
+              finishReset('Сбросить одометрию');
+            }, function(){
+              finishReset('Ошибка — повторить');
+            });
+          } catch (error) {
+            finishReset('Ошибка — повторить');
+          }
         });
     });
     </script>
