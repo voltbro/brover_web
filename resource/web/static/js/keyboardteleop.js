@@ -21,6 +21,8 @@ var KEYBOARDTELEOP = KEYBOARDTELEOP || {
  *   * ros - the ROSLIB.Ros connection handle
  *   * topic (optional) - the Twist topic to publish to, like '/cmd_vel'
  *   * throttle (optional) - a constant throttle for the speed
+ *   * maxLinearSpeed (optional) - maximum linear speed
+ *   * maxAngularSpeed (optional) - maximum angular speed
  */
 KEYBOARDTELEOP.Teleop = function(options) {
   var that = this;
@@ -28,8 +30,10 @@ KEYBOARDTELEOP.Teleop = function(options) {
   var ros = options.ros;
   var topic = options.topic || '/cmd_vel';
   var onIrrigationChange = options.onIrrigationChange || function() {};
-  // permanent throttle
-  var throttle = options.throttle || 1.0;
+  var throttle = options.throttle !== undefined ? options.throttle : 1.0;
+  var maxLinearSpeed = options.maxLinearSpeed !== undefined ? options.maxLinearSpeed : 0.375;
+  var maxAngularSpeed = options.maxAngularSpeed !== undefined ? options.maxAngularSpeed : 1.5;
+  var commandPublishPeriod = 50;
 
   // used to externally throttle the speed (e.g., from a slider)
   this.scale = 1.0;
@@ -127,19 +131,19 @@ KEYBOARDTELEOP.Teleop = function(options) {
     switch (keyCode) {
       case 65:
         // turn left
-        z = 1.5 * speed;
+        z = maxAngularSpeed * speed;
         break;
       case 87:
         // up
-        x = 0.8 * speed;
+        x = maxLinearSpeed * speed;
         break;
       case 68:
         // turn right
-        z = -1.5 * speed;
+        z = -maxAngularSpeed * speed;
         break;
       case 83:
         // down
-        x = -0.8 * speed;
+        x = -maxLinearSpeed * speed;
         break;
       case 74:
         // irrigation left
@@ -184,6 +188,13 @@ KEYBOARDTELEOP.Teleop = function(options) {
     }
   };
 
+  // Keep publishing while a movement key is held so move_node does not time out.
+  var publishTimer = window.setInterval(function() {
+    if (x !== 0 || z !== 0) {
+      publishCurrentTwist();
+    }
+  }, commandPublishPeriod);
+
   // handle the key
   var body = document.getElementsByTagName('body')[0];
   var isEditableTarget = function(target) {
@@ -194,13 +205,24 @@ KEYBOARDTELEOP.Teleop = function(options) {
     return tagName === 'input' || tagName === 'textarea' || tagName === 'select' || target.isContentEditable;
   };
 
-  body.addEventListener('keydown', function(e) {
-    if (!isEditableTarget(e.target)) {
-      handleKey(e.keyCode, true);
+  var handleKeyDown = function(event) {
+    if (!isEditableTarget(event.target)) {
+      handleKey(event.keyCode, true);
     }
-  }, false);
-  body.addEventListener('keyup', function(e) {
-    handleKey(e.keyCode, false);
-  }, false);
+  };
+
+  var handleKeyUp = function(event) {
+    handleKey(event.keyCode, false);
+  };
+
+  body.addEventListener('keydown', handleKeyDown, false);
+  body.addEventListener('keyup', handleKeyUp, false);
+
+  this.dispose = function(publishStop) {
+    window.clearInterval(publishTimer);
+    body.removeEventListener('keydown', handleKeyDown, false);
+    body.removeEventListener('keyup', handleKeyUp, false);
+    that.stop(publishStop);
+  };
 };
 KEYBOARDTELEOP.Teleop.prototype.__proto__ = EventEmitter2.prototype;
