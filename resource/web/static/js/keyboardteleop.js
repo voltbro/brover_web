@@ -17,6 +17,8 @@ var KEYBOARDTELEOP = KEYBOARDTELEOP || {
  *   * ros - the ROSLIB.Ros connection handle
  *   * topic (optional) - Twist topic, for example '/cmd_vel'
  *   * throttle (optional) - constant speed multiplier
+ *   * maxLinearSpeed (optional) - maximum linear speed
+ *   * maxAngularSpeed (optional) - maximum angular speed
  */
 KEYBOARDTELEOP.Teleop = function(options) {
   var that = this;
@@ -33,8 +35,16 @@ KEYBOARDTELEOP.Teleop = function(options) {
   );
 
   // Физические ограничения ровера.
-  var maxLinearSpeed = 0.375;
-  var maxAngularSpeed = 1.5;
+  var maxLinearSpeed = (
+    options.maxLinearSpeed !== undefined
+      ? options.maxLinearSpeed
+      : 0.375
+  );
+  var maxAngularSpeed = (
+    options.maxAngularSpeed !== undefined
+      ? options.maxAngularSpeed
+      : 1.5
+  );
 
   // Период повторной публикации команды, мс.
   var commandPublishPeriod = 50;
@@ -178,32 +188,25 @@ KEYBOARDTELEOP.Teleop = function(options) {
     );
   };
 
-  body.addEventListener('keydown', function(event) {
+  var handleKeyDown = function(event) {
     if (!isEditableTarget(event.target)) {
       handleKey(event.keyCode, true);
     }
-  }, false);
+  };
 
-  body.addEventListener('keyup', function(event) {
+  var handleKeyUp = function(event) {
     handleKey(event.keyCode, false);
-  }, false);
+  };
 
-  // Если окно потеряло фокус, останавливаем ровер.
-  window.addEventListener('blur', function() {
-    that.stop();
-  }, false);
-
-  // При переключении на другую вкладку тоже останавливаемся.
-  document.addEventListener('visibilitychange', function() {
-    if (document.hidden) {
-      that.stop();
-    }
-  }, false);
+  body.addEventListener('keydown', handleKeyDown, false);
+  body.addEventListener('keyup', handleKeyUp, false);
 
   // Метод для корректного удаления Teleop при необходимости.
-  this.dispose = function() {
+  this.dispose = function(publishStop) {
     window.clearInterval(publishTimer);
-    that.stop();
+    body.removeEventListener('keydown', handleKeyDown, false);
+    body.removeEventListener('keyup', handleKeyUp, false);
+    that.stop(publishStop);
   };
 };
 

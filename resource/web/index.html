@@ -191,9 +191,16 @@
           stopAllMotion(false);
         });
 
+        var motionLimits = {
+          linear: 0.375,
+          angular: 1.5
+        };
+
         var teleop = new KEYBOARDTELEOP.Teleop({
             ros : ros,
             topic : '/cmd_vel',
+            maxLinearSpeed : motionLimits.linear,
+            maxAngularSpeed : motionLimits.angular,
         });
 
         var touchCmdVel = new ROSLIB.Topic({
@@ -237,8 +244,8 @@
 
         function publishJoystick() {
           var speed = teleop.scale;
-          var linearX = -joystickVector.y * 0.8 * speed;
-          var angularZ = -joystickVector.x * 1.5 * speed;
+          var linearX = -joystickVector.y * motionLimits.linear * speed;
+          var angularZ = -joystickVector.x * motionLimits.angular * speed;
           publishTwist(linearX, angularZ);
         }
 
