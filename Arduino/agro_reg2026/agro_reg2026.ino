@@ -25,6 +25,8 @@ Servo cameraPanServo;
 Servo irrigationTiltServo;
 Servo irrigationPanServo;
 
+#define VrefPin PB2
+
 // ===== Pump =====
 #define PUMP_OUT1 PB5
 #define PUMP_OUT2 PB7
@@ -147,6 +149,9 @@ void setup() {
   // --- Pump ---
   pinMode(PUMP_OUT1, OUTPUT);
   pinMode(PUMP_OUT2, OUTPUT);
+
+  pinMode(VrefPin, OUTPUT);
+  digitalWrite(VrefPin, HIGH);
 }
 
 // ===== LOOP =====
