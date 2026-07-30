@@ -392,14 +392,19 @@ body.theme-light .theme-toggle:hover {
   margin: 10px 0 5px;
 }
 
-.pump-controls {
+.gripper-controls {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 8px;
 }
 
-.pump-button,
-.irrigation-button {
+.gripper-button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-height: 48px;
+  padding: 8px 10px;
   border: 1px solid var(--line);
   border-radius: 7px;
   background: var(--panel);
@@ -414,59 +419,30 @@ body.theme-light .theme-toggle:hover {
   user-select: none;
 }
 
-.pump-button *,
-.irrigation-button * {
+.gripper-button * {
   -webkit-touch-callout: none;
   -webkit-user-select: none;
   user-select: none;
 }
 
-.pump-button {
-  min-height: 48px;
-  padding: 8px 10px;
+.gripper-button__arrow {
+  font-size: 22px;
+  line-height: 1;
 }
 
-.pump-button--active {
+.gripper-button:active,
+.gripper-button--active {
   border-color: var(--accent-strong);
   background: var(--accent-strong);
   color: #06100d;
 }
 
-.irrigation-pad {
-  display: grid;
-  grid-template-columns: repeat(3, 48px);
-  gap: 8px;
-  justify-content: center;
-}
-
-.irrigation-button {
-  position: relative;
-  display: grid;
-  place-items: center;
-  width: 48px;
-  height: 42px;
-  border-bottom-width: 3px;
-}
-
-.irrigation-button__arrow {
-  font-size: 20px;
-  line-height: 1;
-}
-
-.irrigation-button__key {
-  position: absolute;
-  top: 3px;
-  right: 5px;
+.control-hint {
+  margin: 9px 0 0;
   color: var(--muted);
-  font-size: 9px;
-  line-height: 1;
-}
-
-.irrigation-button:active,
-.irrigation-button--active {
-  border-color: var(--accent-strong);
-  background: var(--accent-strong);
-  color: #06100d;
+  font-size: 12px;
+  font-weight: 700;
+  text-align: center;
 }
 
 .slider.slider-horizontal {
@@ -740,19 +716,9 @@ body.theme-light .theme-toggle:hover {
     margin: 6px 0 3px;
   }
 
-  .pump-button {
+  .gripper-button {
     min-height: 38px;
     padding: 6px 8px;
-  }
-
-  .irrigation-pad {
-    grid-template-columns: repeat(3, 42px);
-    gap: 5px;
-  }
-
-  .irrigation-button {
-    width: 42px;
-    height: 34px;
   }
 
 }
@@ -816,19 +782,9 @@ body.theme-light .theme-toggle:hover {
     margin: 3px 0 2px;
   }
 
-  .pump-button {
+  .gripper-button {
     min-height: 30px;
     padding: 4px 7px;
-  }
-
-  .irrigation-pad {
-    grid-template-columns: repeat(3, 38px);
-    gap: 3px;
-  }
-
-  .irrigation-button {
-    width: 38px;
-    height: 28px;
   }
 }
 
@@ -975,27 +931,13 @@ body.theme-light .theme-toggle:hover {
     margin: 4px 0 2px;
   }
 
-  .pump-button {
+  .gripper-button {
     min-height: 36px;
     padding: 6px 8px;
   }
 
-  .irrigation-pad {
-    grid-template-columns: repeat(3, 42px);
-    gap: 5px;
-  }
-
-  .irrigation-button {
-    width: 42px;
-    height: 34px;
-  }
-
-  .irrigation-button__arrow {
+  .gripper-button__arrow {
     font-size: 24px;
-  }
-
-  .irrigation-button__key {
-    display: none;
   }
 
   .mobile-joystick {

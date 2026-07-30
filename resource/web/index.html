@@ -64,7 +64,7 @@
       </section>
 
       <div class="mobile-mode-tabs" role="tablist" aria-label="Режим управления">
-        <button type="button" class="mobile-mode-tab mobile-mode-tab--active" data-mobile-mode="agro">Агро</button>
+        <button type="button" class="mobile-mode-tab mobile-mode-tab--active" data-mobile-mode="agro">Оборудование</button>
         <button type="button" class="mobile-mode-tab" data-mobile-mode="movement">Движение</button>
       </div>
 
@@ -101,7 +101,7 @@
         <section class="agro-panel">
           <div class="panel-heading">
             <div>
-              <div class="eyebrow">Система полива</div>
+              <div class="eyebrow">Транспортировка растений</div>
             </div>
           </div>
 
@@ -116,28 +116,22 @@
             <input id="vertical_cam" type="text" data-provide="slider" data-slider-min="-45" data-slider-max="45" data-slider-step="5" data-slider-value="0">
           </div>
 
-          <div class="agro-control">
+          <div class="agro-control agro-control--gripper">
             <div class="agro-control__header">
-              <strong>Насос</strong>
-              <span id="pump_status">Остановлен</span>
+              <strong>Подъём схвата</strong>
+              <span id="gripper_status">Остановлен</span>
             </div>
-            <div class="pump-controls">
-              <button id="pump_on" type="button" class="pump-button" data-pump-state="1">Наполнить бак</button>
-              <button id="pump_out" type="button" class="pump-button" data-pump-state="2">Полив</button>
+            <div class="gripper-controls">
+              <button type="button" class="gripper-button" data-gripper-state="1">
+                <span class="gripper-button__arrow">↑</span>
+                <span>Поднять</span>
+              </button>
+              <button type="button" class="gripper-button" data-gripper-state="2">
+                <span class="gripper-button__arrow">↓</span>
+                <span>Опустить</span>
+              </button>
             </div>
-          </div>
-
-          <div class="agro-control">
-            <div class="agro-control__header">
-              <strong>Направление полива</strong>
-              <span><span id="irrigation_pan_value">90</span>° / <span id="irrigation_tilt_value">160</span>°</span>
-            </div>
-            <div class="irrigation-pad" aria-label="Управление направлением полива">
-              <div></div><button type="button" class="irrigation-button" data-irrigation-axis="tilt" data-irrigation-delta="2" aria-label="Полив вверх"><span class="irrigation-button__arrow">↑</span><span class="irrigation-button__key">K</span></button><div></div>
-              <button type="button" class="irrigation-button" data-irrigation-axis="pan" data-irrigation-delta="2" aria-label="Полив влево"><span class="irrigation-button__arrow">←</span><span class="irrigation-button__key">J</span></button>
-              <button type="button" class="irrigation-button" data-irrigation-axis="tilt" data-irrigation-delta="-2" aria-label="Полив вниз"><span class="irrigation-button__arrow">↓</span><span class="irrigation-button__key">I</span></button>
-              <button type="button" class="irrigation-button" data-irrigation-axis="pan" data-irrigation-delta="-2" aria-label="Полив вправо"><span class="irrigation-button__arrow">→</span><span class="irrigation-button__key">L</span></button>
-            </div>
+            <p class="control-hint">Удерживайте кнопку во время движения</p>
           </div>
         </section>
       </aside>
@@ -213,10 +207,7 @@
             ros : ros,
             topic : '/cmd_vel',
             maxLinearSpeed : motionLimits.linear,
-            maxAngularSpeed : motionLimits.angular,
-            onIrrigationChange : function(axis, value) {
-              $('#irrigation_' + axis + '_value').text(value);
-            }
+            maxAngularSpeed : motionLimits.angular
         });
 
         function clamp(value, min, max) {
@@ -256,81 +247,47 @@
           cameraTiltTopic.publish(new ROSLIB.Message({data: value}));
         });
 
-        var pumpTopic = new ROSLIB.Topic({
+        var gripperTopic = new ROSLIB.Topic({
           ros : ros,
-          name : '/irrigation/pump',
+          name : '/gripper/lift',
           messageType : 'std_msgs/Int16'
         });
 
-        var activePumpButton = null;
+        var activeGripperButton = null;
 
-        function publishPump(state) {
-          pumpTopic.publish(new ROSLIB.Message({data: state}));
+        function publishGripper(state) {
+          gripperTopic.publish(new ROSLIB.Message({data: state}));
         }
 
-        function stopPump(publishStop) {
-          if (!activePumpButton) {
+        function stopGripper(publishStop) {
+          if (!activeGripperButton) {
             return;
           }
           if (publishStop !== false) {
-            publishPump(0);
+            publishGripper(0);
           }
-          activePumpButton.removeClass('pump-button--active');
-          activePumpButton = null;
-          $('#pump_status').text('Остановлен');
+          activeGripperButton.removeClass('gripper-button--active');
+          activeGripperButton = null;
+          $('#gripper_status').text('Остановлен');
         }
 
-        $('.pump-button').on('pointerdown', function(event) {
+        $('.gripper-button').on('pointerdown', function(event) {
           event.preventDefault();
-          stopPump();
-          activePumpButton = $(this);
-          activePumpButton.addClass('pump-button--active');
-          $('#pump_status').text(activePumpButton.data('pump-state') === 1 ? 'Наполнение' : 'Полив');
+          stopGripper();
+          activeGripperButton = $(this);
+          activeGripperButton.addClass('gripper-button--active');
+          $('#gripper_status').text(
+            activeGripperButton.data('gripper-state') === 1
+              ? 'Подъём'
+              : 'Опускание'
+          );
           if (this.setPointerCapture) {
             this.setPointerCapture(event.originalEvent.pointerId);
           }
-          publishPump(activePumpButton.data('pump-state'));
+          publishGripper(activeGripperButton.data('gripper-state'));
         }).on('pointerup pointercancel lostpointercapture', function() {
-          stopPump();
+          stopGripper();
         });
-
-        var irrigationRepeatTimer = null;
-        var activeIrrigationButton = null;
-
-        function adjustIrrigation(button) {
-          var axis = button.data('irrigation-axis');
-          var delta = Number(button.data('irrigation-delta'));
-          if (axis === 'pan') {
-            teleop.adjustIrrigationPan(delta);
-          } else {
-            teleop.adjustIrrigationTilt(delta);
-          }
-        }
-
-        function stopIrrigationRepeat() {
-          if (irrigationRepeatTimer) {
-            clearInterval(irrigationRepeatTimer);
-            irrigationRepeatTimer = null;
-          }
-          if (activeIrrigationButton) {
-            activeIrrigationButton.removeClass('irrigation-button--active');
-            activeIrrigationButton = null;
-          }
-        }
-
-        $('.irrigation-button').on('pointerdown', function(event) {
-          event.preventDefault();
-          stopIrrigationRepeat();
-          activeIrrigationButton = $(this);
-          activeIrrigationButton.addClass('irrigation-button--active');
-          if (this.setPointerCapture) {
-            this.setPointerCapture(event.originalEvent.pointerId);
-          }
-          adjustIrrigation(activeIrrigationButton);
-          irrigationRepeatTimer = setInterval(function() {
-            adjustIrrigation(activeIrrigationButton);
-          }, 120);
-        }).on('pointerup pointercancel lostpointercapture', stopIrrigationRepeat);
 
         $('.mobile-mode-tab').on('click', function() {
           var mode = $(this).data('mobile-mode');
@@ -407,8 +364,7 @@
           if (joystick) {
             stopJoystick(publishStop);
           }
-          stopPump(publishStop);
-          stopIrrigationRepeat();
+          stopGripper(publishStop);
         }
 
         joystick.on('pointerdown', function(event) {

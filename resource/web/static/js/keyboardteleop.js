@@ -29,7 +29,6 @@ KEYBOARDTELEOP.Teleop = function(options) {
   options = options || {};
   var ros = options.ros;
   var topic = options.topic || '/cmd_vel';
-  var onIrrigationChange = options.onIrrigationChange || function() {};
   var throttle = options.throttle !== undefined ? options.throttle : 1.0;
   var maxLinearSpeed = options.maxLinearSpeed !== undefined ? options.maxLinearSpeed : 0.375;
   var maxAngularSpeed = options.maxAngularSpeed !== undefined ? options.maxAngularSpeed : 1.5;
@@ -81,39 +80,6 @@ KEYBOARDTELEOP.Teleop = function(options) {
     }
   };
 
-  var irrigationTiltAngle = 160;
-  var irrigationPanAngle = 90;
-
-  var irrigationTiltTopic = new ROSLIB.Topic({
-    ros : ros,
-    name : '/irrigation/nozzle/tilt',
-    messageType : 'std_msgs/Int16'
-  });
-
-  var irrigationPanTopic = new ROSLIB.Topic({
-    ros : ros,
-    name : '/irrigation/nozzle/pan',
-    messageType : 'std_msgs/Int16'
-  });
-
-  function clamp(value, min, max) {
-    return Math.max(min, Math.min(max, value));
-  }
-
-  this.adjustIrrigationPan = function(delta) {
-    irrigationPanAngle = clamp(irrigationPanAngle + delta, 40, 180);
-    irrigationPanTopic.publish(new ROSLIB.Message({data: irrigationPanAngle}));
-    onIrrigationChange('pan', irrigationPanAngle);
-    return irrigationPanAngle;
-  };
-
-  this.adjustIrrigationTilt = function(delta) {
-    irrigationTiltAngle = clamp(irrigationTiltAngle + delta, 94, 160);
-    irrigationTiltTopic.publish(new ROSLIB.Message({data: irrigationTiltAngle}));
-    onIrrigationChange('tilt', irrigationTiltAngle);
-    return irrigationTiltAngle;
-  };
-
   // sets up a key listener on the page used for keyboard teleoperation
   var handleKey = function(keyCode, keyDown) {
     // used to check for changes in speed
@@ -144,34 +110,6 @@ KEYBOARDTELEOP.Teleop = function(options) {
       case 83:
         // down
         x = -maxLinearSpeed * speed;
-        break;
-      case 74:
-        // irrigation left
-        if (keyDown) {
-          that.adjustIrrigationPan(2);
-        }
-        pub = false;
-        break;
-      case 76:
-        // irrigation right
-        if (keyDown) {
-          that.adjustIrrigationPan(-2);
-        }
-        pub = false;
-        break;
-      case 75:
-        // irrigation up
-        if (keyDown) {
-          that.adjustIrrigationTilt(2);
-        }
-        pub = false;
-        break;
-      case 73:
-        // irrigation down
-        if (keyDown) {
-          that.adjustIrrigationTilt(-2);
-        }
-        pub = false;
         break;
       default:
         pub = false;

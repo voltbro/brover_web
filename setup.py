@@ -48,7 +48,7 @@ setup(
     entry_points={
         'console_scripts': [
             'web_server = brover_web.web_server:main',
-            'irrigation_control = brover_web.irrigation_control:main',
+            'transport_control = brover_web.transport_control:main',
         ],
     },
 )
