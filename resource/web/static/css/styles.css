@@ -156,7 +156,8 @@ body.theme-light .theme-toggle:hover {
 .video-panel,
 .metric-panel,
 .control-panel,
-.agro-panel {
+.agro-panel,
+.recognition-panel {
   background: var(--panel);
   border: 1px solid var(--line);
   border-radius: 8px;
@@ -359,6 +360,54 @@ body.theme-light .theme-toggle:hover {
 .agro-panel {
   display: grid;
   gap: 12px;
+}
+
+.recognition-panel {
+  display: grid;
+  gap: 12px;
+}
+
+.recognition-status {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+  min-height: 54px;
+  padding: 12px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--panel-soft);
+}
+
+.recognition-status__dot {
+  flex: 0 0 auto;
+  width: 11px;
+  height: 11px;
+  border-radius: 50%;
+  background: currentColor;
+}
+
+.recognition-status strong {
+  min-width: 0;
+  color: var(--text);
+  font-size: 18px;
+  line-height: 1.25;
+  overflow-wrap: anywhere;
+}
+
+.recognition-status--ok {
+  color: var(--accent);
+  border-color: rgba(55, 214, 164, 0.45);
+}
+
+.recognition-status--idle {
+  color: var(--warn);
+  border-color: rgba(240, 184, 79, 0.45);
+}
+
+.recognition-status--bad {
+  color: var(--bad);
+  border-color: rgba(239, 107, 107, 0.45);
 }
 
 .agro-control {
@@ -658,7 +707,8 @@ body.theme-light .theme-toggle:hover {
 
   .video-panel,
   .metric-panel,
-  .agro-panel {
+  .agro-panel,
+  .recognition-panel {
     padding: 10px;
   }
 
@@ -676,7 +726,8 @@ body.theme-light .theme-toggle:hover {
   }
 
   .side-panel,
-  .agro-panel {
+  .agro-panel,
+  .recognition-panel {
     gap: 8px;
   }
 
@@ -738,7 +789,8 @@ body.theme-light .theme-toggle:hover {
   }
 
   .metric-panel,
-  .agro-panel {
+  .agro-panel,
+  .recognition-panel {
     padding: 8px;
   }
 
@@ -766,7 +818,8 @@ body.theme-light .theme-toggle:hover {
     padding: 4px 8px;
   }
 
-  .agro-panel {
+  .agro-panel,
+  .recognition-panel {
     gap: 4px;
   }
 
@@ -914,9 +967,19 @@ body.theme-light .theme-toggle:hover {
     display: grid;
   }
 
-  .agro-panel {
+  .agro-panel,
+  .recognition-panel {
     gap: 6px;
     padding: 8px;
+  }
+
+  .recognition-status {
+    min-height: 46px;
+    padding: 9px;
+  }
+
+  .recognition-status strong {
+    font-size: 16px;
   }
 
   .agro-control {

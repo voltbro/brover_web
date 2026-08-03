@@ -134,6 +134,19 @@
             <p class="control-hint">Удерживайте кнопку во время движения</p>
           </div>
         </section>
+
+        <section class="recognition-panel" aria-label="Распознавание объектов">
+          <div class="panel-heading">
+            <div>
+              <div class="eyebrow">Распознавание</div>
+            </div>
+          </div>
+
+          <div id="recognition_status" class="recognition-status recognition-status--idle">
+            <span class="recognition-status__dot"></span>
+            <strong id="recognition_result">Распознавание не запущено</strong>
+          </div>
+        </section>
       </aside>
     </main>
 
@@ -162,6 +175,9 @@
     $(document).ready(function(){
         var rosStatus = $('#ros_status');
         var themeToggle = $('#theme_toggle');
+        var recognitionStatus = $('#recognition_status');
+        var recognitionResult = $('#recognition_result');
+        var recognitionTimer = null;
 
         function applyTheme(theme) {
           $('body').toggleClass('theme-light', theme === 'light');
@@ -177,6 +193,28 @@
           applyTheme(nextTheme);
         });
 
+        function setRecognitionState(text, state) {
+          recognitionResult.text(text);
+          recognitionStatus
+            .removeClass('recognition-status--ok recognition-status--idle recognition-status--bad')
+            .addClass('recognition-status--' + state);
+        }
+
+        function resetRecognitionState() {
+          if (recognitionTimer) {
+            clearTimeout(recognitionTimer);
+            recognitionTimer = null;
+          }
+          setRecognitionState('Распознавание не запущено', 'idle');
+        }
+
+        function refreshRecognitionTimeout() {
+          if (recognitionTimer) {
+            clearTimeout(recognitionTimer);
+          }
+          recognitionTimer = setTimeout(resetRecognitionState, 6000);
+        }
+
         var ros = new ROSLIB.Ros({
             url : 'ws://{{ros_host}}:9090'
         });
@@ -189,13 +227,29 @@
         ros.on('error', function() {
           rosStatus.html('<span class="status-dot"></span>ROS недоступен');
           rosStatus.removeClass('status--ok status--warn').addClass('status--bad');
+          resetRecognitionState();
           stopAllControls(false);
         });
 
         ros.on('close', function() {
           rosStatus.html('<span class="status-dot"></span>ROS недоступен');
           rosStatus.removeClass('status--ok status--warn').addClass('status--bad');
+          resetRecognitionState();
           stopAllControls(false);
+        });
+
+        var recognitionListener = new ROSLIB.Topic({
+          ros : ros,
+          name : '/brover_recognizer/result',
+          messageType : 'std_msgs/msg/String'
+        });
+
+        recognitionListener.subscribe(function(message) {
+          var text = message.data || 'Ничего не распознано';
+          var state = text.indexOf('Найдено:') === 0 ? 'ok' : 'idle';
+
+          setRecognitionState(text, state);
+          refreshRecognitionTimeout();
         });
 
         var motionLimits = {
