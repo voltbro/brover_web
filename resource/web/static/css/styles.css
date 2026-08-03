@@ -683,6 +683,36 @@ body.theme-light .theme-toggle:hover {
   }
 }
 
+@media (min-width: 1600px) and (min-height: 901px) and (max-height: 950px) {
+  .topbar {
+    padding-top: 8px;
+    padding-bottom: 8px;
+  }
+
+  .dashboard {
+    gap: 10px;
+    padding: 10px 14px;
+  }
+
+  .video-panel {
+    max-width: min(1060px, calc((100dvh - 204px) * 4 / 3));
+  }
+
+  .side-panel,
+  .agro-panel {
+    gap: 10px;
+  }
+
+  .metric-panel,
+  .agro-panel {
+    padding: 12px;
+  }
+
+  .panel-heading {
+    margin-bottom: 9px;
+  }
+}
+
 @media (min-width: 981px) and (max-height: 900px) {
   .topbar {
     gap: 9px;
