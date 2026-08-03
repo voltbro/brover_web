@@ -156,8 +156,7 @@ body.theme-light .theme-toggle:hover {
 .video-panel,
 .metric-panel,
 .control-panel,
-.agro-panel,
-.recognition-panel {
+.agro-panel {
   background: var(--panel);
   border: 1px solid var(--line);
   border-radius: 8px;
@@ -362,9 +361,13 @@ body.theme-light .theme-toggle:hover {
   gap: 12px;
 }
 
-.recognition-panel {
+.recognition-control {
   display: grid;
-  gap: 12px;
+  gap: 8px;
+}
+
+.recognition-control__header {
+  margin-bottom: 0;
 }
 
 .recognition-status {
@@ -372,8 +375,8 @@ body.theme-light .theme-toggle:hover {
   align-items: center;
   gap: 10px;
   min-width: 0;
-  min-height: 54px;
-  padding: 12px;
+  min-height: 42px;
+  padding: 9px 10px;
   border: 1px solid var(--line);
   border-radius: 8px;
   background: var(--panel-soft);
@@ -390,7 +393,7 @@ body.theme-light .theme-toggle:hover {
 .recognition-status strong {
   min-width: 0;
   color: var(--text);
-  font-size: 18px;
+  font-size: 16px;
   line-height: 1.25;
   overflow-wrap: anywhere;
 }
@@ -707,8 +710,7 @@ body.theme-light .theme-toggle:hover {
 
   .video-panel,
   .metric-panel,
-  .agro-panel,
-  .recognition-panel {
+  .agro-panel {
     padding: 10px;
   }
 
@@ -726,8 +728,7 @@ body.theme-light .theme-toggle:hover {
   }
 
   .side-panel,
-  .agro-panel,
-  .recognition-panel {
+  .agro-panel {
     gap: 8px;
   }
 
@@ -772,17 +773,9 @@ body.theme-light .theme-toggle:hover {
     padding: 6px 8px;
   }
 
-  .recognition-panel {
-    padding: 8px 10px;
-  }
-
-  .recognition-panel .panel-heading {
-    margin-bottom: 4px;
-  }
-
   .recognition-status {
-    min-height: 38px;
-    padding: 7px 9px;
+    min-height: 36px;
+    padding: 6px 8px;
   }
 
   .recognition-status strong {
@@ -806,8 +799,7 @@ body.theme-light .theme-toggle:hover {
   }
 
   .metric-panel,
-  .agro-panel,
-  .recognition-panel {
+  .agro-panel {
     padding: 8px;
   }
 
@@ -835,8 +827,7 @@ body.theme-light .theme-toggle:hover {
     padding: 4px 8px;
   }
 
-  .agro-panel,
-  .recognition-panel {
+  .agro-panel {
     gap: 4px;
   }
 
@@ -855,14 +846,6 @@ body.theme-light .theme-toggle:hover {
   .gripper-button {
     min-height: 30px;
     padding: 4px 7px;
-  }
-
-  .recognition-panel {
-    padding: 6px 8px;
-  }
-
-  .recognition-panel .panel-heading {
-    display: none;
   }
 
   .recognition-status {
@@ -1001,15 +984,14 @@ body.theme-light .theme-toggle:hover {
     display: grid;
   }
 
-  .agro-panel,
-  .recognition-panel {
+  .agro-panel {
     gap: 6px;
     padding: 8px;
   }
 
   .recognition-status {
-    min-height: 46px;
-    padding: 9px;
+    min-height: 38px;
+    padding: 7px 8px;
   }
 
   .recognition-status strong {
