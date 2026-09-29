@@ -38,7 +38,7 @@ KEYBOARDTELEOP.Teleop = function(options) {
   var maxLinearSpeed = (
     options.maxLinearSpeed !== undefined
       ? options.maxLinearSpeed
-      : 0.375
+      : 1.0
   );
   var maxAngularSpeed = (
     options.maxAngularSpeed !== undefined
