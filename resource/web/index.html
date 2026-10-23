@@ -192,7 +192,7 @@
         });
 
         var motionLimits = {
-          linear: 1.0,
+          linear: 0.375,
           angular: 1.5
         };
 
@@ -328,16 +328,39 @@
           $('#imu_yaw').text(yaw.toFixed(0));
         });
 
-        var bat_listener = new ROSLIB.Topic({
-          ros : ros,
-          name : '/bat',
-          messageType : 'sensor_msgs/msg/BatteryState'
+        var batteryVoltages = { '/bat_1': null, '/bat_2': null };
+
+        function renderBatteryVoltage() {
+          var values = Object.keys(batteryVoltages).map(function(topic) {
+            return batteryVoltages[topic];
+          }).filter(function(value) {
+            return typeof value === 'number' && Number.isFinite(value);
+          });
+          var voltage = values.length ? Math.max.apply(null, values).toFixed(2) : '--';
+          $('#bat_voltage, #mobile_bat_voltage').text(voltage);
+        }
+
+        function clearBatteryVoltages() {
+          batteryVoltages['/bat_1'] = null;
+          batteryVoltages['/bat_2'] = null;
+          renderBatteryVoltage();
+        }
+
+        var batteryListeners = Object.keys(batteryVoltages).map(function(topic) {
+          var listener = new ROSLIB.Topic({
+            ros: ros,
+            name: topic,
+            messageType: 'sensor_msgs/msg/BatteryState'
+          });
+          listener.subscribe(function(message) {
+            batteryVoltages[topic] = message.voltage;
+            renderBatteryVoltage();
+          });
+          return listener;
         });
 
-        bat_listener.subscribe(function(message) {
-          $('#bat_voltage').text(message.voltage.toFixed(2));
-          $('#mobile_bat_voltage').text(message.voltage.toFixed(2));
-        });
+        ros.on('close', clearBatteryVoltages);
+        ros.on('error', clearBatteryVoltages);
 
         function updateWifiStatus() {
           $.getJSON('/wifi_status', function(data) {
