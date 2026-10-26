@@ -13,16 +13,25 @@
   <body>
     <header class="topbar">
       <div class="topbar__brand">BRoverWEB</div>
+
       <nav class="topbar__icons" aria-label="Быстрые ссылки">
-        <a class="icon-link" href="http://{{ros_host}}:8090/?folder=/home/pi" target="_blank" title="VS Code Web">VS Code Web</a>
-        <a class="icon-link" href="https://docs.voltbro.ru/brover-manual/" target="_blank" title="Инструкция">Инструкция</a>
+        <a class="icon-link"
+          href="https://docs.voltbro.ru/rover-b7-manual/"
+          target="_blank"
+          rel="noopener noreferrer"
+          title="Инструкция">
+          Инструкция
+        </a>
       </nav>
-      <div class="topbar__status">
-        <span>Статус:</span>
-        <div id="ros_status" class="status status--warn"><span class="status-dot"></span>ROS доступен</div>
-      </div>
-      <button id="theme_toggle" type="button" class="theme-toggle" aria-label="Переключить тему">Светлая тема</button>
+
+      <button id="theme_toggle"
+              type="button"
+              class="theme-toggle"
+              aria-label="Переключить тему">
+        Светлая тема
+      </button>
     </header>
+
 
     <main class="dashboard">
       <section class="video-panel">
@@ -145,7 +154,6 @@
 
     <script>
     $(document).ready(function(){
-        var rosStatus = $('#ros_status');
         var themeToggle = $('#theme_toggle');
 
         function applyTheme(theme) {
@@ -174,22 +182,15 @@
             url : 'ws://{{ros_host}}:9090'
         });
 
-        ros.on('connection', function() {
-          rosStatus.html('<span class="status-dot"></span>ROS доступен');
-          rosStatus.removeClass('status--warn status--bad').addClass('status--ok');
-        });
-
+        
         ros.on('error', function() {
-          rosStatus.html('<span class="status-dot"></span>ROS недоступен');
-          rosStatus.removeClass('status--ok status--warn').addClass('status--bad');
           stopAllMotion(false);
         });
 
         ros.on('close', function() {
-          rosStatus.html('<span class="status-dot"></span>ROS недоступен');
-          rosStatus.removeClass('status--ok status--warn').addClass('status--bad');
           stopAllMotion(false);
         });
+
 
         var motionLimits = {
           linear: 0.375,
