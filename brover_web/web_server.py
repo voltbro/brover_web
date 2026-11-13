@@ -1,10 +1,12 @@
 import rclpy
-import os, signal, time
+import os
+import signal
+import time
 import re
 import subprocess
 import threading
 from rclpy.node import Node
-from flask import Flask, send_from_directory, send_file, request, jsonify, render_template
+from flask import Flask, request, jsonify, render_template
 from ament_index_python.packages import get_package_share_directory
 from werkzeug.serving import make_server
 import socket
@@ -160,7 +162,6 @@ def serve_index():
                         ros_host = ip_address,
                         ros_robot = robot_name,
                         video_topics = get_video_topics())
-#   return "Hello World1!"
 
 @app.route('/shutdown', methods=['POST'])
 def shutdown():

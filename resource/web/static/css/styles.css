@@ -429,13 +429,6 @@ body.theme-light .theme-toggle:hover {
   cursor: wait;
 }
 
-.speed-control label {
-  display: block;
-  margin-bottom: 10px;
-  color: var(--muted);
-  font-weight: 700;
-}
-
 .slider.slider-horizontal {
   width: 100%;
 }
@@ -450,38 +443,6 @@ body.theme-light .theme-toggle:hover {
 
 .slider-handle {
   background: var(--accent);
-}
-
-.keys {
-  display: grid;
-  grid-template-columns: repeat(3, 54px);
-  gap: 8px;
-  justify-content: center;
-  margin-top: 14px;
-}
-
-kbd {
-  display: grid;
-  place-items: center;
-  width: 54px;
-  height: 42px;
-  border: 1px solid var(--line);
-  border-bottom-width: 3px;
-  border-radius: 6px;
-  background: var(--panel-soft);
-  color: var(--text);
-  font-size: 16px;
-  font-weight: 800;
-  box-shadow: none;
-  cursor: pointer;
-  touch-action: none;
-  user-select: none;
-}
-
-kbd.key-active {
-  border-color: var(--accent-strong);
-  background: var(--accent-strong);
-  color: #06100d;
 }
 
 .mobile-panel {
