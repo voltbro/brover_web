@@ -40,7 +40,7 @@
           {% for video_topic in video_topics %}
           <article class="video-card{% if loop.first %} video-card--active{% endif %}" data-camera="{{loop.index0}}">
             <div class="video-frame">
-              <img src="http://{{ros_host}}:9999/stream?topic={{video_topic}}&type=ros_compressed" alt="Video stream {{video_topic}}">
+              <img data-stream-src="http://{{ros_host}}:9999/stream?topic={{video_topic}}&type=ros_compressed"{% if loop.first %} src="http://{{ros_host}}:9999/stream?topic={{video_topic}}&type=ros_compressed"{% endif %} alt="Video stream {{video_topic}}">
             </div>
           </article>
           {% endfor %}
@@ -164,10 +164,18 @@
 
         $('.camera-tab').on('click', function() {
           var camera = $(this).data('camera');
+          var selectedCard = $('.video-card[data-camera="' + camera + '"]');
+          if (selectedCard.hasClass('video-card--active')) {
+            return;
+          }
+          // Скрытые MJPEG-потоки отключаем, чтобы не расходовать сеть и CPU.
+          $('.video-card img').removeAttr('src');
           $('.camera-tab').removeClass('camera-tab--active');
           $(this).addClass('camera-tab--active');
           $('.video-card').removeClass('video-card--active');
-          $('.video-card[data-camera="' + camera + '"]').addClass('video-card--active');
+          selectedCard.addClass('video-card--active');
+          var selectedImage = selectedCard.find('img');
+          selectedImage.attr('src', selectedImage.attr('data-stream-src'));
         });
 
         var ros = new ROSLIB.Ros({
