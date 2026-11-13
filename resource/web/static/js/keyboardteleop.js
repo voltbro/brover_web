@@ -65,6 +65,7 @@ KEYBOARDTELEOP.Teleop = function(options) {
   });
 
   var publishCurrentTwist = function() {
+    if (!ros.isConnected) return null;
     var twist = new ROSLIB.Message({
       angular: {
         x: 0,
@@ -189,7 +190,7 @@ KEYBOARDTELEOP.Teleop = function(options) {
   };
 
   var handleKeyDown = function(event) {
-    if (!isEditableTarget(event.target)) {
+    if (ros.isConnected && !isEditableTarget(event.target)) {
       handleKey(event.keyCode, true);
     }
   };

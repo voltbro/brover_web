@@ -181,8 +181,30 @@
         var ros = new ROSLIB.Ros({
             url : 'ws://{{ros_host}}:9090'
         });
+        var reconnectTimer = null;
+        var reconnectDelay = 1000;
+        var pageLeaving = false;
+
+        function scheduleReconnect() {
+          if (pageLeaving || reconnectTimer !== null || ros.isConnected) return;
+          reconnectTimer = setTimeout(function() {
+            reconnectTimer = null;
+            if (!pageLeaving && !ros.isConnected) {
+              try {
+                ros.connect('ws://{{ros_host}}:9090');
+              } catch (error) {
+                scheduleReconnect();
+              }
+            }
+          }, reconnectDelay);
+          reconnectDelay = Math.min(reconnectDelay * 2, 10000);
+        }
 
         ros.on('connection', function() {
+          clearTimeout(reconnectTimer);
+          reconnectTimer = null;
+          reconnectDelay = 1000;
+          stopAllMotion(false);
           rosStatus.html('<span class="status-dot"></span>ROS доступен');
           rosStatus.removeClass('status--warn status--bad').addClass('status--ok');
         });
@@ -191,12 +213,14 @@
           rosStatus.html('<span class="status-dot"></span>ROS недоступен');
           rosStatus.removeClass('status--ok status--warn').addClass('status--bad');
           stopAllMotion(false);
+          // Повторяем подключение после close, когда старый сокет уже закрыт.
         });
 
         ros.on('close', function() {
           rosStatus.html('<span class="status-dot"></span>ROS недоступен');
           rosStatus.removeClass('status--ok status--warn').addClass('status--bad');
           stopAllMotion(false);
+          scheduleReconnect();
         });
 
         var motionLimits = {
@@ -219,6 +243,7 @@
         });
 
         function publishTwist(linearX, angularZ) {
+          if (!ros.isConnected) return;
           touchCmdVel.publish(new ROSLIB.Message({
             angular: {x: 0, y: 0, z: angularZ},
             linear: {x: linearX, y: 0, z: 0}
@@ -282,6 +307,7 @@
 
         joystick.on('pointerdown', function(event) {
           event.preventDefault();
+          if (!ros.isConnected) return;
           teleop.stop();
           joystick.addClass('mobile-joystick--active');
           this.setPointerCapture(event.originalEvent.pointerId);
@@ -306,6 +332,15 @@
 
         $(window).on('blur pagehide', function() {
           stopAllMotion(ros.isConnected === true);
+        });
+        $(window).on('pagehide', function() {
+          pageLeaving = true;
+          clearTimeout(reconnectTimer);
+          reconnectTimer = null;
+        });
+        $(window).on('pageshow', function() {
+          pageLeaving = false;
+          scheduleReconnect();
         });
 
         $(document).on('visibilitychange', function() {
